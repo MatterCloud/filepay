@@ -17,6 +17,8 @@ const mingo = require("mingo")
 const _Buffer = require('buffer/')
 const bitcoin = require('bsv');
 const axios = require('axios');
+const textEncoder = require('text-encoder');
+
 const defaults = {
   api_key: '', // If rate limit exceeds 3 requests/second. Get API key at https://www.mattercloud.net
   rpc: "https://api.mattercloud.net",
@@ -66,7 +68,6 @@ var build = function(options, callback) {
             return f.test(item)
           })
         }
-        console.log('res', res);
         let tx = new bitcoin.Transaction(options.tx).from(res);
 
         if (script) {
@@ -121,7 +122,6 @@ var send = function(options, callback) {
       { rawtx: tx.toString() },
       options.api_key ? { headers: { api_key: options.api_key } } : {},
     ).then((res) => {
-      console.log('build and broadcasts', res);
       callback(res.data);
     }).catch((ex) => {
       console.log('filepay ex', ex);

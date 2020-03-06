@@ -1,6 +1,6 @@
 {
   "name": "filepay",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Post data and upload files to bitcoin sv",
   "main": "index.js",
   "scripts": {
@@ -22,7 +22,8 @@
     "bitcore-explorers": "^1.0.1",
     "bsv": "^1.3.0",
     "buffer": "^5.2.1",
-    "mingo": "^2.2.4"
+    "mingo": "^2.2.4",
+    "text-encoder": "0.0.4"
   },
   "peerDependencies": {
     "bsv": "^1.2.0"
