@@ -32,7 +32,7 @@ Post to the blockchain with just 4 lines of code.
 
 ## 1. filepay Transaction Composer
 
-- [filepay transaction composer](https://unwriter.github.io/filepay/example/composer)
+- [filepay transaction composer](https://mattercloud.github.io/filepay/example/composer.html)
 
 - [View source](example/composer.html)
 
@@ -40,7 +40,7 @@ Post to the blockchain with just 4 lines of code.
 
 Post to both Memo.cash and Blockpress with a single interface.
 
-- [DEMO](https://unwriter.github.io/filepay/example/playground)
+- [DEMO](https://mattercloud.github.io/filepay/example/playground)
 
 - [View source](example/playground.html)
 
