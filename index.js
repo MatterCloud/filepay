@@ -57,7 +57,7 @@ var build = function(options, callback) {
     const address = privateKey.toAddress();
     let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
     axios.get(`${rpcaddr}/api/v3/main/address/${address}/utxo`,
-      { headers: { api_key: options.api_key } }
+      options.api_key ? { headers: { api_key: options.api_key } } : {}
     ).then((res) => {
         console.log('getunspent utxos', address, res);
         if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
@@ -118,7 +118,7 @@ var send = function(options, callback) {
     let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
     axios.post(`${rpcaddr}/api/v3/main/merchants/tx/broadcast`,
       { rawtx: tx.toString() },
-      { headers: { api_key: options.api_key } }
+      options.api_key ? { headers: { api_key: options.api_key } } : {},
     ).then((res) => {
       console.log('build and broadcasts', res);
       callback(res);
