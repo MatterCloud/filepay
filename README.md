@@ -10,6 +10,12 @@ Copied by MatterCloud (Matter Web Services Inc.) as base for 'filepay' developme
 
 Filepay is a simple library to post data and upload files to the **Bitcoin SV blockchain**.
 
+Example file:
+
+https://media.bitcoinfiles.org/55d2e026a1c7ddb11a933d9e087c0a561ed4b1d94b6947ae9480ecf22bfe335f
+
+https://search.matterpool.io/tx/55d2e026a1c7ddb11a933d9e087c0a561ed4b1d94b6947ae9480ecf22bfe335f
+
 ![logo](logo.png)
 
 ---

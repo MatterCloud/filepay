@@ -66,6 +66,7 @@ var build = function(options, callback) {
             return f.test(item)
           })
         }
+        console.log('res', res);
         let tx = new bitcoin.Transaction(options.tx).from(res);
 
         if (script) {
@@ -206,7 +207,7 @@ var hexEncodeIfNeeded = function(data) {
   return '0x' + hexEncode(data).toLowerCase();
 }
 
-var isUtf8 = function(data) {
+var isUtf8 = function(encoding) {
   if (!encoding || /\s*/i.test(encoding)) {
       return true;
   }
@@ -319,6 +320,7 @@ var putFile = async (request, callback) => {
         }
     }
     return send({
+        safe: true,
         data: newArgs,
         pay: request.pay,
         rpc: request.rpc,
