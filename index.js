@@ -59,7 +59,7 @@ var build = function(options, callback) {
     const address = privateKey.toAddress();
     let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
     axios.get(`${rpcaddr}/api/v3/main/address/${address}/utxo`,
-      options.api_key ? { headers: { api_key: options.api_key } } : {}
+      options.pay.api_key ? { headers: { api_key: options.pay.api_key } } : {}
     ).then((response) => {
         res = response.data
         if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
@@ -120,7 +120,7 @@ var send = function(options, callback) {
     let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
     axios.post(`${rpcaddr}/api/v3/main/merchants/tx/broadcast`,
       { rawtx: tx.toString() },
-      options.api_key ? { headers: { api_key: options.api_key } } : {},
+      options.pay.api_key ? { headers: { api_key: options.pay.api_key } } : {},
     ).then((res) => {
       callback(res.data);
     }).catch((ex) => {
