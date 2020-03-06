@@ -38,7 +38,7 @@ Post to the blockchain with just 4 lines of code.
 
 ## 2. Microblogging Playground
 
-Post to both Memo.cash and Blockpress with a single interface.
+Post to any Bitcoin SV services using the blockchain as a datastore and message bus.
 
 - [DEMO](https://mattercloud.github.io/filepay/example/playground)
 
@@ -76,9 +76,23 @@ const filepay = require('filepay')
 
 Send `"Hello from filepay"` to [memo.cash](https://memo.cash) in 5 lines of code.
 
-
 ```
 const privateKey = [YOUR PRIVATE KEY HERE];
+
+// Upload File or object
+require('filepay').putFile({
+   file: {
+      content: 'Hello world!',
+      contentType: 'text/plain',
+      encoding: 'utf8',
+      name: 'hello.txt'
+   },
+   pay: { key: "58Jd09..." }
+});
+```
+
+```
+// Upload arbitrary OP_RETURN
 filepay.send({
   data: ["0x6d02", "Hello from filepay"],
   pay: { key: privateKey }
