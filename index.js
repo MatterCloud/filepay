@@ -16,6 +16,7 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEAL
 const mingo = require("mingo")
 const _Buffer = require('buffer/')
 const bitcoin = require('bsv');
+const axios = require('axios');
 const defaults = {
   api_key: '', // If rate limit exceeds 3 requests/second. Get API key at https://www.mattercloud.net
   rpc: "https://api.mattercloud.net",
