@@ -122,7 +122,7 @@ var send = function(options, callback) {
       { rawtx: tx.toString() },
       options.pay.api_key ? { headers: { api_key: options.pay.api_key } } : {},
     ).then((res) => {
-      callback(res.data);
+      callback(res.data.txid);
     }).catch((ex) => {
       console.log('filepay ex', ex);
       callback(ex);
