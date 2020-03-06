@@ -18,6 +18,8 @@ Filepay is a simple library to post data and upload files to the **Bitcoin SV bl
 
 Post to the blockchain with just 4 lines of code.
 
+![code](code.png)
+
 ---
 
 # Demo
