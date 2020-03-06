@@ -1,6 +1,6 @@
 {
   "name": "filepay",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Post data and upload files to bitcoin sv",
   "main": "index.js",
   "scripts": {
@@ -34,6 +34,7 @@
   "devDependencies": {
     "dotenv": "^6.2.0",
     "mocha": "^5.1.1",
-    "uglify-es": "^3.3.9"
+    "uglify-es": "^3.3.9",
+    "uglifyjs": "^2.4.11"
   }
 }
