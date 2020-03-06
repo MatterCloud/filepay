@@ -1,6 +1,6 @@
 {
   "name": "filepay",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "Post data and upload files to bitcoin sv",
   "main": "index.js",
   "scripts": {
