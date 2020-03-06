@@ -58,8 +58,8 @@ var build = function(options, callback) {
     let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
     axios.get(`${rpcaddr}/api/v3/main/address/${address}/utxo`,
       options.api_key ? { headers: { api_key: options.api_key } } : {}
-    ).then((res) => {
-        console.log('getunspent utxos', address, res);
+    ).then((response) => {
+        res = response.data
         if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
           let f = new mingo.Query(options.pay.filter.q.find)
           res = res.filter(function(item) {
@@ -121,7 +121,7 @@ var send = function(options, callback) {
       options.api_key ? { headers: { api_key: options.api_key } } : {},
     ).then((res) => {
       console.log('build and broadcasts', res);
-      callback(res);
+      callback(res.data);
     }).catch((ex) => {
       console.log('filepay ex', ex);
       callback(ex);
