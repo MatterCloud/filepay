@@ -95,7 +95,7 @@ var build = function(options, callback) {
         callback(null, transaction);
       }).catch((ex) => {
         console.log('filepay ex', ex);
-        callback(ex);
+        callback(ex, null);
     })
   } else {
     // key doesn't exist => create an unsigned transaction
@@ -122,10 +122,10 @@ var send = function(options, callback) {
       { rawtx: tx.toString() },
       options.pay.api_key ? { headers: { api_key: options.pay.api_key } } : {},
     ).then((res) => {
-      callback(res.data.result.txid);
+      callback(null, res.data.result.txid);
     }).catch((ex) => {
       console.log('filepay ex', ex);
-      callback(ex);
+      callback(ex, null);
     });
   })
 }
@@ -335,3 +335,26 @@ module.exports = {
   bsv: bitcoin,
 }
 
+
+
+/*
+// Post File or object
+require('filepay').putFile({
+   file: {
+      content: 'Hello world!',
+      contentType: 'text/plain',
+      encoding: 'utf8',
+      name: 'hello.txt'
+   },
+   pay: { key: "58Jd09..." }
+});
+
+// Post OP_RETURN strings or hex data
+require('filepay').send({
+   data: [ "0x6d02", "Hello world!"],
+   pay: {
+      api_key: "goes here",
+      key: "58Jd09...",
+   }
+});
+*/
