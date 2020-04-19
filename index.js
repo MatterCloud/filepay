@@ -30,7 +30,6 @@ const defaults = {
 // and return a hex formatted string of either a tranaction or a script
 var build = function(options, callback) {
   let script = null;
-  let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
   if (options.tx) {
     // if tx exists, check to see if it's already been signed.
     // if it's a signed transaction
@@ -263,7 +262,7 @@ var buildFile = function(request, callback) {
                             message: 'signature key required'
                         }, callback);
                     }
-                    const identityPrivateKey = new datapay.bsv.PrivateKey(signatureKey.key);
+                    const identityPrivateKey = new filepay.bsv.PrivateKey(signatureKey.key);
                     const identityAddress = identityPrivateKey.toAddress().toLegacyAddress();
                     args.push('0x' + Buffer.from('|').toString('hex'));
                     const opReturnHexArray = Utils.buildAuthorIdentity({
@@ -328,14 +327,18 @@ var putFile = async (request, callback) => {
     }, callback);
 }
 
+var connect = function(endpoint) {
+  var rpc = endpoint ? endpoint : defaults.rpc;
+  return rpc;
+}
+
 module.exports = {
   putFile: putFile,
   build: build,
   send: send,
   bsv: bitcoin,
+  connect: connect,
 }
-
-
 
 /*
 // Post File or object
