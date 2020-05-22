@@ -4,7 +4,7 @@ const bitcoin = require('bsv')
 const filepay = require('../index');
 
 // Private Key for Demo Purpose Only
-const privKey = process.env.privKey
+const privKey = 'KxPpaGmowYWcSuGSLdt6fCLiRAJRcWCpke4B8Gsf59hghQ6AKvwV'; //process.env.privKey
 
 var utxoSize;
 describe('filepay', function() {
@@ -65,7 +65,7 @@ describe('filepay', function() {
         filepay.build(options, function(err, tx) {
           let generated = tx.toObject()
           let s = new bitcoin.Script(generated.outputs[0].script).toString()
-          assert(s.startsWith("OP_RETURN OP_PUSHDATA4 1818585099"))
+          assert(s.startsWith("OP_0 OP_RETURN OP_PUSHDATA4 1818585099 0x6c6f20776f726c64"))
           done()
         });
       })
@@ -76,7 +76,7 @@ describe('filepay', function() {
         filepay.build(options, function(err, tx) {
           let generated = tx.toObject()
           let s = new bitcoin.Script(generated.outputs[0].script).toString()
-          assert(s.startsWith("OP_RETURN 2 0x6d02 11 0x68656c6c6f20776f726c64 OP_PUSHDATA4 1634492951"))
+          assert(s.startsWith("OP_0 OP_RETURN 2 0x6d02 11 0x68656c6c6f20776f726c64 OP_PUSHDATA4 1634492951"))
           done()
         });
       })
@@ -232,6 +232,8 @@ describe('filepay', function() {
           }
         }
         filepay.build(options, function(err, tx) {
+
+          console.log('build error', err, tx);
           let generated = tx.toObject();
 
           // input length 1 => from the user specifiec by the private key
@@ -243,9 +245,10 @@ describe('filepay', function() {
           assert.equal(generated.outputs.length, 2)
 
           let s1 = new bitcoin.Script(generated.outputs[0].script)
-
-          // the first output is OP_RETURN
-          assert(s1.chunks[0].opcodenum, bitcoin.Opcode.OP_RETURN)
+          console.log('s11', s1, s1.chunks[0].opcodenum, bitcoin.Opcode.OP_FALSE);
+          // OP_0 OP_RETURN 2 0x6d02 11 0x68656c6c6f20776f726c64
+          assert(s1.chunks[0].opcodenum === bitcoin.Opcode.OP_FALSE)
+          assert(s1.chunks[1].opcodenum === bitcoin.Opcode.OP_RETURN)
 
           // the second script is a pubkeyhashout (change address)
           let s2 = new bitcoin.Script(generated.outputs[1].script)
@@ -326,7 +329,8 @@ describe('filepay', function() {
 
           // 1. OP_RETURN
           let s1 = new bitcoin.Script(tx.outputs[0].script)
-          assert(s1.chunks[0].opcodenum, bitcoin.Opcode.OP_RETURN)
+          assert(s1.chunks[0].opcodenum === bitcoin.Opcode.OP_FALSE)
+          assert(s1.chunks[1].opcodenum === bitcoin.Opcode.OP_RETURN)
           // 2. Manual transaction output
           // the second script is a pubkeyhashout (change address)
           let s2 = new bitcoin.Script(tx.outputs[1].script)
@@ -365,7 +369,8 @@ describe('filepay', function() {
 
           // 1. OP_RETURN
           let s1 = new bitcoin.Script(tx.outputs[0].script)
-          assert(s1.chunks[0].opcodenum, bitcoin.Opcode.OP_RETURN)
+          assert(s1.chunks[0].opcodenum === bitcoin.Opcode.OP_FALSE)
+          assert(s1.chunks[1].opcodenum === bitcoin.Opcode.OP_RETURN)
           // 2. Manual transaction output
           // the second script is a pubkeyhashout (change address)
           let s2 = new bitcoin.Script(tx.outputs[1].script)
@@ -457,9 +462,9 @@ describe('filepay', function() {
 
               // tx1's output should have one item
               assert.equal(tx1.outputs.length, 1)
-              // and it should be an OP_RETURN
               let script1 = new bitcoin.Script(tx1.outputs[0].script)
-              assert(script1.chunks[0].opcodenum, bitcoin.Opcode.OP_RETURN)
+              assert(script1.chunks[0].opcodenum === bitcoin.Opcode.OP_FALSE)
+              assert(script1.chunks[1].opcodenum === bitcoin.Opcode.OP_RETURN)
 
               // tx2's output should have two items
               assert.equal(tx2.outputs.length, 2)
@@ -467,8 +472,8 @@ describe('filepay', function() {
                 new bitcoin.Script(tx2.outputs[0].script),
                 new bitcoin.Script(tx2.outputs[1].script)
               ]
-              // the first should be OP_RETURN
-              assert(script2[0].chunks[0].opcodenum, bitcoin.Opcode.OP_RETURN)
+              assert(script2[0].chunks[0].opcodenum === bitcoin.Opcode.OP_FALSE)
+              assert(script2[0].chunks[1].opcodenum === bitcoin.Opcode.OP_RETURN)
               // the second script is a pubkeyhashout (change address)
               assert(script2[1].isPublicKeyHashOut())
               done()
@@ -506,7 +511,8 @@ describe('filepay', function() {
                 new bitcoin.Script(tx2.outputs[1].script)
               ]
               // the first should be OP_RETURN
-              assert(script2[0].chunks[0].opcodenum, bitcoin.Opcode.OP_RETURN)
+              assert(script2[0].chunks[0].opcodenum === bitcoin.Opcode.OP_FALSE)
+              assert(script2[0].chunks[1].opcodenum === bitcoin.Opcode.OP_RETURN)
               // the second script is a pubkeyhashout (change address)
               assert(script2[1].isPublicKeyHashOut())
 
@@ -626,7 +632,26 @@ describe('filepay', function() {
       it('exposes bitcoin', function() {
         assert(filepay.bsv.Networks)
         assert(filepay.bsv.Opcode)
+        assert(filepay.bsv.Transaction)
+        assert(filepay.bsv.Script)
+        assert(filepay.bsv.Crypto)
+      })
+    })
+    describe('data2script', function() {
+      it('Handles empty array', function() {
+        assert.equal(filepay.data2script(), '')
+      })
+      it('Handles sample script', function() {
+        const s = filepay.data2script(['0x00', '0x6d', '0x031234']);
+        assert.equal(s.toHex(), '006a0100016d03031234')
+        assert.equal(s.toASM(), '0 OP_RETURN 00 6d 031234')
+      })
+      it('Handles sample script utf8', function() {
+        const s = filepay.data2script(['0x00', '0x6d', 'hello world']);
+        assert.equal(s.toHex(), '006a0100016d0b68656c6c6f20776f726c64')
+        assert.equal(s.toASM(), '0 OP_RETURN 00 6d 68656c6c6f20776f726c64')
       })
     })
   })
+
 })

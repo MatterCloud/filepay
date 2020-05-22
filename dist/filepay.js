@@ -22,11 +22,12 @@ const axios = require('axios');
 const textEncoder = require('text-encoder');
 
 const defaults = {
-  api_key: '', // If rate limit exceeds 3 requests/second. Get API key at https://www.mattercloud.net
+  api_key: '4Bko9Fko7TnRzTPxUUCLsE3v4DLZuTpQfsjKXAAvcA4p9RiFNpQrPcgE5YcmJzA5C4', // If rate limit exceeds 3 requests/second. Get API key at https://www.mattercloud.net
   rpc: "https://api.mattercloud.net",
   fee: 400,
   feeb: 1.4,
 }
+
 // The end goal of 'build' is to create a hex formated transaction object
 // therefore this function must end with _tx() for all cases
 // and return a hex formatted string of either a tranaction or a script
@@ -58,11 +59,12 @@ var build = function(options, callback) {
     let key = options.pay.key;
     const privateKey = new bitcoin.PrivateKey(key);
     const address = privateKey.toAddress();
-    let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
-    axios.get(`${rpcaddr}/api/v3/main/address/${address}/utxo`,
-      options.pay.api_key ? { headers: { api_key: options.pay.api_key } } : {}
-    ).then((response) => {
-        res = response.data
+    connect(options).getUnspentUtxos(address, function(err, res) {
+      console.log('getunspent', err, res);
+        if (err) {
+          callback ? callback(err, null) : '';
+          return;
+        }
         if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
           let f = new mingo.Query(options.pay.filter.q.find)
           res = res.filter(function(item) {
@@ -95,7 +97,7 @@ var build = function(options, callback) {
         let transaction = tx.sign(privateKey);
         callback(null, transaction);
       }).catch((ex) => {
-        console.log('filepay ex', ex);
+        console.log('filepay build ex', ex);
         callback(ex, null);
     })
   } else {
@@ -108,6 +110,34 @@ var build = function(options, callback) {
     callback(null, tx)
   }
 }
+
+var buildHeader = function(options) {
+  if (!options) {
+    return {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+  }
+  if (options && options.pay && options.pay.api_key) {
+    return {
+      headers: {
+        'Content-Type': 'application/json',
+        api_key: options.pay.api_key
+      }
+    };
+  }
+  if (options && options.api_key) {
+    return {
+      headers: {
+        'Content-Type': 'application/json',
+        api_key: options.api_key
+      }
+    };
+  }
+  return {}
+};
+
 var send = function(options, callback) {
   if (!callback) {
     callback = function() {};
@@ -121,7 +151,7 @@ var send = function(options, callback) {
     let rpcaddr = (options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
     axios.post(`${rpcaddr}/api/v3/main/merchants/tx/broadcast`,
       { rawtx: tx.toString() },
-      options.pay.api_key ? { headers: { api_key: options.pay.api_key } } : {},
+      buildHeader(options),
     ).then((res) => {
       callback(null, res.data.result.txid);
     }).catch((ex) => {
@@ -171,6 +201,33 @@ var _script = function(options) {
   return s;
 }
 
+/**
+ * Get unspent utxos for an address wrapper
+ *
+ * @param {*} options
+ */
+var apiClient = function(options) {
+  return {
+    getUnspentUtxos: async (address, callback) => {
+      let rpcaddr = (options && options.pay && options.pay.rpc) ? options.pay.rpc : defaults.rpc;
+      return axios.get(`${rpcaddr}/api/v3/main/address/${address}/utxo`,
+        buildHeader(options),
+      )
+      .then((response) => {
+        if (callback) {
+          callback(null, response.data)
+        }
+        return response.data;
+      }).catch((err) => {
+        console.log(err);
+        if (callback) {
+          callback(err);
+        }
+        return err;
+      })
+    },
+  };
+}
 
 var callbackAndResolve = function (resolveOrReject, data, callback) {
   if (callback) {
@@ -328,18 +385,71 @@ var putFile = async (request, callback) => {
         api_key: request.api_key
     }, callback);
 }
-
-var connect = function(endpoint) {
-  var rpc = endpoint ? endpoint : defaults.rpc;
-  return rpc;
+/**
+ * Queue a request to cache the file on BitcoinFiles.org and settle on BSV blockchain after payment is received.
+ * The response contains a 'payment_sats_needed' field and an 'payment_address` that can be used to pay for queuing into a tx.
+ * @param {*} requestRequest { name: 'filename', data: '0933923...', encoding: 'hex' }
+ * @param {*} callback
+ */
+var queueFile = async (request, callback) => {
+  var formData = new FormData();
+  formData.append("file", Buffer.from(request.data, request.encoding));
+  axios.post(`${rpcaddr}/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    ).then((res) => {
+      callback(null, res.data);
+    }).catch((ex) => {
+      callback(ex, null);
+    });
 }
+
+var connect = function(options) {
+  return apiClient(options);
+}
+
+var data2script = function(scriptArray) {
+  if (!scriptArray || !Array.isArray(scriptArray)) {
+    return '';
+  }
+  var s = new bitcoin.Script();
+  s.add(bitcoin.Opcode.OP_FALSE);
+  s.add(bitcoin.Opcode.OP_RETURN);
+  scriptArray.forEach(function(item) {
+    // add push data
+    if (item.constructor.name === 'ArrayBuffer') {
+      let buffer = _Buffer.Buffer.from(item)
+      s.add(buffer)
+    } else if (item.constructor.name === 'Buffer') {
+      s.add(item)
+    } else if (typeof item === 'string') {
+      if (/^0x/i.test(item)) {
+        // ex: 0x6d02
+        s.add(Buffer.from(item.slice(2), "hex"))
+      } else {
+        // ex: "hello"
+        s.add(Buffer.from(item))
+      }
+    } else if (typeof item === 'object' && item.hasOwnProperty('op')) {
+      s.add({ opcodenum: item.op })
+    }
+  })
+  return s;
+}
+
 
 module.exports = {
   putFile: putFile,
+  queueFile: queueFile,
   build: build,
   send: send,
   bsv: bitcoin,
   connect: connect,
+  data2script: data2script
 }
 
 /*
