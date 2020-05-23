@@ -118,6 +118,8 @@ var config = {
     fee: 400,
     to: [{
       address: "1A2JN4JAUoKCQ5kA4pHhu4qCqma8jZSU81",
+      // script: "script here...",
+      // data: ["0x6d02", "hello from filepay in another output"]
       value: 1000
     }]
   }
@@ -417,6 +419,14 @@ const tx = {
     }, {
       address: "1A2JN4JAUoKCQ5kA4pHhu4qCqma8jZSU81",
       value: 500
+    },
+    {
+      script: '76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac',
+      value: 1999
+    },
+    {
+      data: ["0x6d02", "hello world again "]
+      value: 0
     }]
   }
 };

@@ -18,12 +18,29 @@ const _Buffer = require('buffer/')
 const bitcoin = require('bsv');
 const axios = require('axios');
 const textEncoder = require('text-encoder');
-
+const bsvCoinselect = require('bsv-coinselect');
 const defaults = {
-  api_key: '4Bko9Fko7TnRzTPxUUCLsE3v4DLZuTpQfsjKXAAvcA4p9RiFNpQrPcgE5YcmJzA5C4', // If rate limit exceeds 3 requests/second. Get API key at https://www.mattercloud.net
+  api_key: 'abc', // https://www.mattercloud.net
   rpc: "https://api.mattercloud.net",
   fee: 400,
   feeb: 1.4,
+}
+
+var buildTransactionInputsOutputs = function(inputs, outputs) {
+  let tx = new bitcoin.Transaction().from(inputs);
+  if (outputs) {
+    for (const output of outputs) {
+      if (output.script) {
+        const a = (new bitcoin.Script(output.script)).toString();
+        tx.addOutput(new bitcoin.Transaction.Output({ script: a, satoshis: output.value }));
+      }
+    }
+  }
+  return tx;
+}
+
+var selectCoins = function(utxos, outputs, feeRate, changeScript, options) {
+  return bsvCoinselect(utxos, outputs, feeRate, changeScript);
 }
 
 // The end goal of 'build' is to create a hex formated transaction object
@@ -44,6 +61,7 @@ var build = function(options, callback) {
         return;
       }
     }
+    return tx;
   } else {
     // construct script only if transaction doesn't exist
     // if a 'transaction' attribute exists, the 'data' should be ignored to avoid confusion
@@ -51,59 +69,102 @@ var build = function(options, callback) {
       script = _script(options)
     }
   }
+
   // Instantiate pay
   if (options.pay && options.pay.key) {
     // key exists => create a signed transaction
     let key = options.pay.key;
     const privateKey = new bitcoin.PrivateKey(key);
     const address = privateKey.toAddress();
-    connect(options).getUnspentUtxos(address, function(err, res) {
-      console.log('getunspent', err, res);
+    connect(options).getUnspentUtxos(address, function(err, utxos) {
         if (err) {
+          console.log('err', err);
           callback ? callback(err, null) : '';
+          return;
+        }
+        if (!utxos || !utxos.length) {
+          callback ? callback('Error: No available utxos', null) : '';
           return;
         }
         if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
           let f = new mingo.Query(options.pay.filter.q.find)
-          res = res.filter(function(item) {
+          utxos = utxos.filter(function(item) {
             return f.test(item)
           })
         }
-        let tx = new bitcoin.Transaction(options.tx).from(res);
-
+        const desiredOutputs = [];
         if (script) {
-          tx.addOutput(new bitcoin.Transaction.Output({ script: script, satoshis: 0 }));
+          desiredOutputs.push({ script: script.toHex(), value: 0 });
         }
+
+        // Handle multiple outputs of varying types
         if (options.pay.to && Array.isArray(options.pay.to)) {
           options.pay.to.forEach(function(receiver) {
-            tx.to(receiver.address, receiver.value)
-          })
+            if (receiver.address) {
+              desiredOutputs.push({
+                script: bitcoin.Script.fromAddress(receiver.address).toHex(),
+                value: receiver.value
+              });
+            } else if (receiver.data) {
+              desiredOutputs.push({
+                script: _script({ data: receiver.data }).toHex(),
+                value: receiver.value
+              });
+            } else if (receiver.script) {
+              desiredOutputs.push({
+                script: receiver.script,
+                value: receiver.value
+              });
+            }
+          });
         }
-
-        tx.fee(defaults.fee).change(address);
-        let opt_pay = options.pay || {};
-        let myfee = opt_pay.fee || Math.ceil(tx._estimateSize()* (opt_pay.feeb || defaults.feeb));
-        tx.fee(myfee);
-
-        // Check all the outputs for dust
-        for(var i=0;i<tx.outputs.length;i++){
-          if(tx.outputs[i]._satoshis>0 && tx.outputs[i]._satoshis<546){
-            tx.outputs.splice(i,1);
-            i--;
-          }
-        }
+        // select coins and provide a changeScript
+        let feeb = (options.pay && options.pay.feeb) ? options.pay.feeb : 0.5;
+        const coinSelectedBuiltTx = selectCoins(utxos, desiredOutputs, feeb, bitcoin.Script.fromAddress(address).toHex(), options);
+        let tx = buildTransactionInputsOutputs(coinSelectedBuiltTx.inputs, coinSelectedBuiltTx.outputs);
+        tx.change(address);
         let transaction = tx.sign(privateKey);
         callback(null, transaction);
       }).catch((ex) => {
-        console.log('filepay build ex', ex);
+        console.log('Filepay build ex', ex);
         callback(ex, null);
     })
   } else {
+
+    const desiredOutputs = [];
+    if (script) {
+      desiredOutputs.push({ script: script, value: 0 });
+    }
+
+    // Handle multiple outputs of varying types
+    if (options.pay && options.pay.to && Array.isArray(options.pay.to)) {
+      options.pay.to.forEach(function(receiver) {
+        if (receiver.address) {
+          desiredOutputs.push({
+            script: bitcoin.Script.fromAddress(receiver.address).toHex(),
+            value: receiver.value
+          });
+        } else if (receiver.data) {
+          desiredOutputs.push({
+            script: _script({ data: receiver.data }).toHex(),
+            value: receiver.value
+          });
+        } else if (receiver.script) {
+          desiredOutputs.push({
+            script: receiver.script,
+            value: receiver.value
+          });
+        }
+      });
+    }
     // key doesn't exist => create an unsigned transaction
     let fee = (options.pay && options.pay.fee) ? options.pay.fee : defaults.fee;
     let tx = new bitcoin.Transaction(options.tx).fee(fee);
-    if (script) {
-      tx.addOutput(new bitcoin.Transaction.Output({ script: script, satoshis: 0 }));
+    for (const out of desiredOutputs) {
+      tx.addOutput(new bitcoin.Transaction.Output({
+        script: out.script,
+        satoshis: out.value
+      }));
     }
     callback(null, tx)
   }
@@ -447,7 +508,8 @@ module.exports = {
   send: send,
   bsv: bitcoin,
   connect: connect,
-  data2script: data2script
+  data2script: data2script,
+  coinselect: bsvCoinselect,
 }
 
 /*
