@@ -67,7 +67,7 @@ const filepay = require('filepay')
 ## 2. In browser
 
 ```
-<script src='https://unpkg.com/filepay@1.0.27/dist/filepay.min.js'></script>
+<script src='https://unpkg.com/filepay@2.0.3/dist/filepay.min.js'></script>
 ```
 
 ---

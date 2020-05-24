@@ -6040,7 +6040,7 @@ function finalize (inputs, outputs, feeRate, changeScript) {
     if (changeScript || changeScript === null) {
       outputs = outputs.concat({
         value: Math.round(remainderAfterExtraOutput) - 1,
-        script: changeScript,
+        script: changeScript ? changeScript : undefined,
       })
     }
   }
