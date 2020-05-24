@@ -4,13 +4,12 @@ const bitcoin = require('bsv')
 const filepay = require('../index');
 const bsvCoinselect = filepay.coinselect;
 // Private Key for Demo Purpose Only
-const privKey = 'KxPpaGmowYWcSuGSLdt6fCLiRAJRcWCpke4B8Gsf59hghQ6AKvwV'; //process.env.privKey
+const privKey = 'xxx'; //process.env.privKey
 const address = new bitcoin.PrivateKey(privKey).toAddress()
-console.log('address');
 var utxoSize;
 
 var options = {
-  api_key: '4Bko9Fko7TnRzTPxUUCLsE3v4DLZuTpQfsjKXAAvcA4p9RiFNpQrPcgE5YcmJzA5C4',
+  api_key: 'abc',
 }
 describe('filepay', function() {
   beforeEach(function(done) {
