@@ -40,6 +40,7 @@ var buildTransactionInputsOutputs = function(inputs, outputs) {
 }
 
 var selectCoins = function(utxos, outputs, feeRate, changeScript, options) {
+  console.log('selectCoins feeb', feeRate);
   return bsvCoinselect(utxos, outputs, feeRate, changeScript);
 }
 
@@ -533,3 +534,32 @@ require('filepay').send({
    }
 });
 */
+
+/*
+
+filepay.send({
+  data: ["0x6d02", "hello from filepay"],
+  pay: {
+    key: "....",
+    to: [
+      // Attach another OP_RETURN for a text file
+      {
+        "data": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "Hello from inside a text file", "text/plain"],
+        "value": 0
+      },
+      // Pay a public address
+      {
+        "address": "131xY3twRUJ1Y9Z9jJFKGLUa4SAdRJppcW",
+        "value": 546
+      },
+      // Pay arbitrary script
+      {
+        "script": "OP_DUP OP_HASH160 20 0x717ff56bc729556b30b456e91b68faec709993ac OP_EQUALVERIFY OP_CHECKSIG",
+        "value": 546
+      }
+    ]
+  }
+});
+*/
+// Example: https://whatsonchain.com/tx/25418da84000051d43776370cc671278241177dcff424c7618fc9dc5b6fa7fdf
+

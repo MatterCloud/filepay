@@ -79,6 +79,51 @@ Send `"Hello from filepay"` to [memo.cash](https://memo.cash) in 5 lines of code
 ```
 const privateKey = [YOUR PRIVATE KEY HERE];
 
+```
+// Upload arbitrary OP_RETURN
+filepay.send({
+  data: ["0x6d02", "Hello from filepay"],
+  pay: { key: privateKey }
+});
+```
+// Above code builds an `OP_RETURN` transaction with `0x6d02 hello` as push data, and broadcasts it to Bitcoin SV network.
+
+```
+filepay.send({
+  data: ["0x6d02", "hello from filepay"],
+  pay: {
+    key: "5JZ4RXH4MoXpaUQMcJHo8DxhZtkf5U5VnYd9zZH8BRKZuAbxZEw",
+    rpc: "https://api.mattercloud.net",
+    fee: 400, // Optional. For a fixed fix.
+    feeb: 0.5,
+    to: [
+      {
+        "data": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "Hello from inside a text file", "text/plain"],
+        "value": 0
+      },
+      {
+        "data": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "# Another file (Markdown)", "text/markdown"],
+        "value": 0
+      },
+      {
+        "address": "131xY3twRUJ1Y9Z9jJFKGLUa4SAdRJppcW",
+        "value": 546
+      },
+      {
+        "script": "OP_DUP OP_HASH160 20 0x717ff56bc729556b30b456e91b68faec709993ac OP_EQUALVERIFY OP_CHECKSIG",
+        "value": 546
+      },
+      {
+        "data": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "_this transaction has 3 OP_RETURN_", "text/markdown"],
+        "value": 0
+      },
+    ]
+  },
+  // Example: https://whatsonchain.com/tx/25418da84000051d43776370cc671278241177dcff424c7618fc9dc5b6fa7fdf
+  // api_key: '...', // Use for higher rate limit. https://www.mattercloud.net
+});
+
+
 // Upload File or object
 require('filepay').putFile({
    file: {
@@ -90,16 +135,6 @@ require('filepay').putFile({
    pay: { key: "58Jd09..." }
 });
 ```
-
-```
-// Upload arbitrary OP_RETURN
-filepay.send({
-  data: ["0x6d02", "Hello from filepay"],
-  pay: { key: privateKey }
-});
-```
-
-Above code builds an `OP_RETURN` transaction with `0x6d02 hello` as push data, and broadcasts it to Bitcoin SV network.
 
 ---
 
