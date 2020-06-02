@@ -42,6 +42,7 @@ var buildTransactionInputsOutputs = function(inputs, outputs) {
 }
 
 var selectCoins = function(utxos, outputs, feeRate, changeScript, options) {
+  console.log('selectCoins feeb', feeRate);
   return bsvCoinselect(utxos, outputs, feeRate, changeScript);
 }
 
@@ -535,6 +536,36 @@ require('filepay').send({
    }
 });
 */
+
+/*
+
+filepay.send({
+  data: ["0x6d02", "hello from filepay"],
+  pay: {
+    key: "....",
+    to: [
+      // Attach another OP_RETURN for a text file
+      {
+        "data": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "Hello from inside a text file", "text/plain"],
+        "value": 0
+      },
+      // Pay a public address
+      {
+        "address": "131xY3twRUJ1Y9Z9jJFKGLUa4SAdRJppcW",
+        "value": 546
+      },
+      // Pay arbitrary script
+      {
+        "script": "OP_DUP OP_HASH160 20 0x717ff56bc729556b30b456e91b68faec709993ac OP_EQUALVERIFY OP_CHECKSIG",
+        "value": 546
+      }
+    ]
+  }
+});
+*/
+// Example: https://whatsonchain.com/tx/25418da84000051d43776370cc671278241177dcff424c7618fc9dc5b6fa7fdf
+
+
 }).call(this,require("buffer").Buffer)
 },{"axios":2,"bsv":37,"bsv-coinselect":35,"buffer":175,"buffer/":83,"mingo":119,"text-encoder":124}],2:[function(require,module,exports){
 module.exports = require('./lib/axios');
@@ -5981,18 +6012,18 @@ module.exports = function coinSelect (utxos, outputs, feeRate, changeScript) {
 
 },{"./accumulative":33,"./blackjack":34,"./utils":36}],36:[function(require,module,exports){
 // baseline estimates, used to improve performance
-var TX_EMPTY_SIZE = 4 + 1 + 1 + 4
-var TX_INPUT_BASE = 32 + 4 + 1 + 4
-var TX_INPUT_PUBKEYHASH = 107
-var TX_OUTPUT_BASE = 8 + 1
-var TX_OUTPUT_PUBKEYHASH = 25
+var TX_EMPTY_SIZE = (4 + 1 + 1 + 4) * 2;  // Added buffer of 400 just in case
+var TX_INPUT_BASE = (32 + 4 + 1 + 4) * 2; // Multiple by 2 to correctly account for bytes
+var TX_INPUT_PUBKEYHASH = (107) * 2;
+var TX_OUTPUT_BASE = (8 + 1) * 2;
+var TX_OUTPUT_PUBKEYHASH = (25) * 2
 var TX_DUST_THRESHOLD = 546;
 function inputBytes (input) {
   return TX_INPUT_BASE + (input.script ? input.script.length : TX_INPUT_PUBKEYHASH)
 }
 
 function outputBytes (output) {
-  return TX_OUTPUT_BASE + (output.script ? output.script.length : TX_OUTPUT_PUBKEYHASH)
+  return TX_OUTPUT_BASE + (output.script ? output.script.length / 2 : TX_OUTPUT_PUBKEYHASH)
 }
 
 function dustThreshold (output, feeRate) {
