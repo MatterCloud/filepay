@@ -138,6 +138,51 @@ require('filepay').putFile({
 
 ---
 
+# Manually Provide Input UTXO's
+
+By providing a `inputs` array, you can specify UTXO's to use.
+
+If the manually provided UTXO's are adequate, then no request to server for additional UTXO's are made.
+
+If the manually provided UTXO's are inadequate, then query the server and combine all UTXO's.
+
+To force a manually provided UTXO to be used, include `required: true`, then it will always be included in the transaction.
+
+The parent `key` is used to sign this input.
+
+```javascript
+filepay.send({
+  data: ["0x6d02", "hello from filepay"],
+  pay: {
+    key: "5JZ4RXH4MoXpaUQMcJHo8DxhZtkf5U5VnYd9zZH8BRKZuAbxZEw",
+    rpc: "https://api.mattercloud.net",
+    feeb: 0.5,
+    inputs: [
+      {
+        "txid": "2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+        "value": 546,
+        "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+        "outputIndex": 1,
+        "required": true // Optional
+      }
+    ],
+    to: [
+      {
+        "data": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "Hello from inside a text file", "text/plain"],
+        "value": 0
+      },
+      {
+        "address": "131xY3twRUJ1Y9Z9jJFKGLUa4SAdRJppcW",
+        "value": 10000
+      }
+    ]
+  },
+});
+
+```
+
+---
+
 # Declarative Programming
 
 filepay lets you build a transaction in a declarative manner. Here's an example:
