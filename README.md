@@ -79,7 +79,6 @@ Send `"Hello from filepay"` to [memo.cash](https://memo.cash) in 5 lines of code
 ```
 const privateKey = [YOUR PRIVATE KEY HERE];
 
-```
 // Upload arbitrary OP_RETURN
 filepay.send({
   data: ["0x6d02", "Hello from filepay"],
@@ -122,8 +121,9 @@ filepay.send({
   // Example: https://whatsonchain.com/tx/25418da84000051d43776370cc671278241177dcff424c7618fc9dc5b6fa7fdf
   // api_key: '...', // Use for higher rate limit. https://www.mattercloud.net
 });
+```
 
-
+```
 // Upload File or object
 require('filepay').putFile({
    file: {
@@ -135,8 +135,6 @@ require('filepay').putFile({
    pay: { key: "58Jd09..." }
 });
 ```
-
----
 
 # Manually Provide Input UTXO's
 
