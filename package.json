@@ -1,11 +1,11 @@
 {
   "name": "filepay",
-  "version": "2.0.6",
+  "version": "2.1.1",
   "description": "Post data and upload files to bitcoin sv",
   "main": "index.js",
   "scripts": {
     "test": "mocha --timeout 30000",
-    "test_scratch": "mocha --timeout 30000 --grep 'ultiple mixed outputs'",
+    "test_scratch": "mocha --timeout 30000 --grep '1 insufficient input and force specific input utxo'",
     "test_feeb": "mocha --timeout 30000 --grep 'feeb rate'",
     "build": "browserify index.js --standalone filepay > dist/filepay.js && uglifyjs dist/filepay.js > dist/filepay.min.js"
   },
@@ -23,7 +23,7 @@
     "axios": "^0.19.2",
     "bitcore-explorers": "^1.0.1",
     "bsv": "^1.5.3",
-    "bsv-coinselect": "^4.0.14",
+    "bsv-coinselect": "^4.1.1",
     "buffer": "^5.2.1",
     "mingo": "^2.2.4",
     "text-encoder": "0.0.4"

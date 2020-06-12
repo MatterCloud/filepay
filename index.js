@@ -26,8 +26,47 @@ const defaults = {
   feeb: 1.4,
 }
 
+var dedupUtxosPreserveRequiredIfFound = function(inputs) {
+  // Standardize up the inputs bcause some libriares need 'amount' and some 'value'
+  let modifiedInputs = [];
+  // Add all required inputs first
+  let map = new Map();
+  for (const input of inputs) {
+    if (input.required) {
+      modifiedInputs.push(input);
+      map.set(input.txid + '-' + input.outputIndex, true);
+    }
+  }
+  // Add all non-required inputs
+  for (const input of inputs) {
+    // Skip duplicate utxos
+    if (map.get(input.txid + '-' + input.outputIndex)) {
+      continue;
+    }
+    if (!input.required) {
+      modifiedInputs.push(input);
+      map.set(input.txid + '-' + input.outputIndex, true);
+    }
+  }
+  return modifiedInputs;
+}
+
 var buildTransactionInputsOutputs = function(inputs, outputs) {
-  let tx = new bitcoin.Transaction().from(inputs);
+  // Standardize up the inputs bcause some libriares need 'amount' and some 'value'
+  let modifiedInputs = [];
+  let map = new Map();
+  for (const input of inputs) {
+    // Skip duplicate utxos
+    if (map.get(input.txid + '-' + input.outputIndex)) {
+      continue;
+    }
+    modifiedInputs.push(Object.assign({}, input, {
+      amount: input.value / 100000000,
+      satoshis: input.value
+    }));
+    map.set(input.txid + '-' + input.outputIndex, true);
+  }
+  let tx = new bitcoin.Transaction().from(modifiedInputs);
   if (outputs) {
     for (const output of outputs) {
       if (output.script) {
@@ -39,8 +78,7 @@ var buildTransactionInputsOutputs = function(inputs, outputs) {
   return tx;
 }
 
-var selectCoins = function(utxos, outputs, feeRate, changeScript, options) {
-  console.log('selectCoins feeb', feeRate);
+var selectCoins = function(utxos, outputs, feeRate, changeScript) {
   return bsvCoinselect(utxos, outputs, feeRate, changeScript);
 }
 
@@ -77,59 +115,107 @@ var build = function(options, callback) {
     let key = options.pay.key;
     const privateKey = new bitcoin.PrivateKey(key);
     const address = privateKey.toAddress();
-    connect(options).getUnspentUtxos(address, function(err, utxos) {
-        if (err) {
-          console.log('err', err);
-          callback ? callback(err, null) : '';
-          return;
-        }
-        if (!utxos || !utxos.length) {
-          callback ? callback('Error: No available utxos', null) : '';
-          return;
-        }
-        if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
-          let f = new mingo.Query(options.pay.filter.q.find)
-          utxos = utxos.filter(function(item) {
-            return f.test(item)
-          })
-        }
-        const desiredOutputs = [];
-        if (script) {
-          desiredOutputs.push({ script: script.toHex(), value: 0 });
-        }
 
-        // Handle multiple outputs of varying types
-        if (options.pay.to && Array.isArray(options.pay.to)) {
-          options.pay.to.forEach(function(receiver) {
-            if (receiver.address) {
-              desiredOutputs.push({
-                script: bitcoin.Script.fromAddress(receiver.address).toHex(),
-                value: receiver.value
-              });
-            } else if (receiver.data) {
-              desiredOutputs.push({
-                script: _script({ data: receiver.data }).toHex(),
-                value: receiver.value
-              });
-            } else if (receiver.script) {
-              desiredOutputs.push({
-                script: receiver.script,
-                value: receiver.value
-              });
-            }
-          });
+    /**
+     *
+     * Construct a transaction for the utxos, taking care to include required=true utxos if needed.
+     *
+     * @param {*} err Whether error happened, if so then callback immediately
+     * @param {*} utxos - Provided  utxos manual and discovered.
+     * @param {*} innerCallback Callback on error or success
+     */
+    const processWithUtxos = function(err, utxos, innerCallback) {
+      if (err) {
+        innerCallback ? innerCallback(err, null) : '';
+        return;
+      }
+      if (!utxos || !utxos.length) {
+        innerCallback ? innerCallback('Error: No available utxos', null) : '';
+        return;
+      }
+      if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
+        let f = new mingo.Query(options.pay.filter.q.find)
+        utxos = utxos.filter(function(item) {
+          return f.test(item)
+        })
+      }
+      const desiredOutputs = [];
+      if (script) {
+        desiredOutputs.push({ script: script.toHex(), value: 0 });
+      }
+
+      // Handle multiple outputs of varying types
+      if (options.pay.to && Array.isArray(options.pay.to)) {
+        options.pay.to.forEach(function(receiver) {
+          if (receiver.address) {
+            desiredOutputs.push({
+              script: bitcoin.Script.fromAddress(receiver.address).toHex(),
+              value: receiver.value
+            });
+          } else if (receiver.data) {
+            desiredOutputs.push({
+              script: _script({ data: receiver.data }).toHex(),
+              value: receiver.value
+            });
+          } else if (receiver.script) {
+            desiredOutputs.push({
+              script: receiver.script,
+              value: receiver.value
+            });
+          }
+        });
+      }
+      // select coins and provide a changeScript
+      let feeb = (options.pay && options.pay.feeb) ? options.pay.feeb : 0.5;
+      const coinSelectedBuiltTx = selectCoins(dedupUtxosPreserveRequiredIfFound(utxos), desiredOutputs, feeb, bitcoin.Script.fromAddress(address).toHex());
+      if (!coinSelectedBuiltTx.inputs || !coinSelectedBuiltTx.outputs) {
+        innerCallback('Insufficient input utxo', null);
+        return;
+      }
+      let tx = buildTransactionInputsOutputs(coinSelectedBuiltTx.inputs, coinSelectedBuiltTx.outputs);
+      tx.change(address);
+      let transaction = tx.sign(privateKey);
+      innerCallback(null, transaction);
+    }
+
+    // If custom inputs are provided, then attempt to use them
+    if (options.pay.inputs && Array.isArray(options.pay.inputs)) {
+      processWithUtxos(null, options.pay.inputs, function(err, tx) {
+        // No error and the tx is valid given just the manual inputs
+        // Therefore return because we had everything we needed with the manual inputs to fulfil total fee/outputs
+        if (!err && tx) {
+          callback(null, tx);
+          return;
         }
-        // select coins and provide a changeScript
-        let feeb = (options.pay && options.pay.feeb) ? options.pay.feeb : 0.5;
-        const coinSelectedBuiltTx = selectCoins(utxos, desiredOutputs, feeb, bitcoin.Script.fromAddress(address).toHex(), options);
-        let tx = buildTransactionInputsOutputs(coinSelectedBuiltTx.inputs, coinSelectedBuiltTx.outputs);
-        tx.change(address);
-        let transaction = tx.sign(privateKey);
-        callback(null, transaction);
-      }).catch((ex) => {
-        console.log('Filepay build ex', ex);
-        callback(ex, null);
-    })
+        // On the other hand, the manual inputs are  inadequate, then lookup extra utxos
+        connect(options).getUnspentUtxos(address, function(err, utxos) {
+          if (err) {
+            callback(err, null);
+            return;
+          }
+          // Merge the provided utxos with the retrieved ones then
+          let mergedUtxos = utxos.concat(options.pay.inputs);
+          processWithUtxos(null, mergedUtxos, function(err, tx) {
+            callback(err, tx);
+          });
+        })
+        .catch((ex) => {
+            console.log('Filepay build ex', ex);
+            callback(ex, null);
+        });
+      });
+    } else {
+      // No manual utxos provided, lookup all of them
+      connect(options).getUnspentUtxos(address, function(err, utxos) {
+        processWithUtxos(err, utxos, function(err, tx) {
+          callback(err, tx);
+        });
+      })
+      .catch((ex) => {
+          console.log('Filepay build ex', ex);
+          callback(ex, null);
+      });
+    }
   } else {
 
     const desiredOutputs = [];

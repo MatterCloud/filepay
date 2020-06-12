@@ -169,10 +169,8 @@ describe('filepay', function() {
           // rest of the pay attributes
           // and make a transaction that sends money to oneself
           // (since no receiver is specified)
-          console.log('tx', tx);
           let generated = tx.toObject();
           // input length utxoSize => from the user specifiec by the private key
-          console.log('utxo', generated, utxoSize);
          //  assert.equal(generated.inputs.length, utxoSize)
           // contains a 'changeScript'
           assert(generated.changeScript)
@@ -791,6 +789,204 @@ describe('Extra', function() {
       })
     })
   })
+  describe('provide manual inputs current', function() {
+    it('1 sufficient input using parent key', function(done) {
+      const address = new bitcoin.PrivateKey(privKey).toAddress()
+      const options = {
+        data: [{op: 78}, "hello world"],
+        pay: {
+          key: privKey,
+          inputs: [
+            {
+              "txid": "ef1708d1b36e4a0f510bcf1220d1c9ca49a4a9f12d6b8e76eb2b47797e217db9",
+              "value": 13214,
+              "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+              "outputIndex": 1
+            }
+          ],
+          to: [{ address: address, value: 546 }]
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        assert.deepEqual(generated, {
+          "hash":"17d1a0603ab8b705639dfe3d18ccf875b7db8864efa001f22f656e0e3cf52121",
+          "version":1,
+          "inputs":[
+             {
+                "prevTxId":"ef1708d1b36e4a0f510bcf1220d1c9ca49a4a9f12d6b8e76eb2b47797e217db9",
+                "outputIndex":1,
+                "sequenceNumber":4294967295,
+                "script":"483045022100f41e10ffc9b8b22a32d485640124dd76b999404ff10e1a690f8028df1ec653f102205c8f0bf1d51c43c38b8fe74d2649fee44db13a6345062b8f4d635d6a7a90f71a412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "scriptString":"72 0x3045022100f41e10ffc9b8b22a32d485640124dd76b999404ff10e1a690f8028df1ec653f102205c8f0bf1d51c43c38b8fe74d2649fee44db13a6345062b8f4d635d6a7a90f71a41 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "output":{
+                   "satoshis":13214,
+                   "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                }
+             }
+          ],
+          "outputs":[
+             {
+                "satoshis":0,
+                "script":"006a4e0b68656c6c6f20776f726c64"
+             },
+             {
+                "satoshis":546,
+                "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+             },
+             {
+                "satoshis":12519,
+                "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+             }
+          ],
+          "nLockTime":0,
+          "changeScript":"OP_DUP OP_HASH160 20 0x161e9c31fbec37d9ecb297bf4b814c6e189dbe52 OP_EQUALVERIFY OP_CHECKSIG"
+        });
+        done()
+      })
+    });
+
+    it('1 insufficient input', function(done) {
+      const address = new bitcoin.PrivateKey(privKey).toAddress()
+      const options = {
+        data: [{op: 78}, "hello world"],
+        pay: {
+          key: privKey,
+          inputs: [
+            {
+              "txid": "ef1708d1b36e4a0f510bcf1220d1c9ca49a4a9f12d6b8e76eb2b47797e217db9",
+              "value": 13214,
+              "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+              "outputIndex": 1
+            }
+          ],
+          to: [{ address: address, value: 13214 }]
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        assert.deepEqual(generated, {
+          "hash":"f36667c10f41796ede2a0bf7c228241a0a650967d472713a78005dbc592e925a",
+          "version":1,
+          "inputs":[
+             {
+                "prevTxId":"ef1708d1b36e4a0f510bcf1220d1c9ca49a4a9f12d6b8e76eb2b47797e217db9",
+                "outputIndex":1,
+                "sequenceNumber":4294967295,
+                "script":"483045022100e865e7c5aa3fad64596f14507e39e1a40bd28bfb247b593274ea287a6dea69f802201a540a7adb65dae065a735400043969237493d88e2350e3b563839ec57a74d1d412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "scriptString":"72 0x3045022100e865e7c5aa3fad64596f14507e39e1a40bd28bfb247b593274ea287a6dea69f802201a540a7adb65dae065a735400043969237493d88e2350e3b563839ec57a74d1d41 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "output":{
+                   "satoshis":13214,
+                   "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                }
+             },
+             {
+                "prevTxId":"2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+                "outputIndex":1,
+                "sequenceNumber":4294967295,
+                "script":"483045022100abdb25dbe45f4ccc2ebf4f3fd78c45e2312195548d61af4f1becdee20e95c9c302207f660c85b0150f4f2043f50927713014c1ddce391e71d81b0fa14ba6261bcae4412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "scriptString":"72 0x3045022100abdb25dbe45f4ccc2ebf4f3fd78c45e2312195548d61af4f1becdee20e95c9c302207f660c85b0150f4f2043f50927713014c1ddce391e71d81b0fa14ba6261bcae441 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "output":{
+                   "satoshis":546,
+                   "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                }
+             }
+          ],
+          "outputs":[
+             {
+                "satoshis":0,
+                "script":"006a4e0b68656c6c6f20776f726c64"
+             },
+             {
+                "satoshis":13214,
+                "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+             }
+          ],
+          "nLockTime":0,
+          "changeScript":"OP_DUP OP_HASH160 20 0x161e9c31fbec37d9ecb297bf4b814c6e189dbe52 OP_EQUALVERIFY OP_CHECKSIG"
+        });
+        done()
+      })
+    })
+
+    it('1 insufficient input and force specific input utxo', function(done) {
+      const address = new bitcoin.PrivateKey(privKey).toAddress()
+      const options = {
+        data: [{op: 78}, "hello world"],
+        pay: {
+          key: privKey,
+          inputs: [
+            {
+              "txid": "2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+              "value": 546,
+              "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+              "outputIndex": 1,
+              "required": true
+            }
+          ],
+          to: [{ address: address, value: 20000 }]
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        assert.deepEqual(generated,
+          {
+            "hash":"b867ad8c367697847be8587611f8ce133860039b5c2776f8f1d0ec490f6941ce",
+            "version":1,
+            "inputs":[
+               {
+                  "prevTxId":"2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+                  "outputIndex":1,
+                  "sequenceNumber":4294967295,
+                  "script":"483045022100bc7c386d9c3740a4817eedf0f193047fa3728f1a6e0bb531c4fb37321f8d44d3022058054d8e0b45215af9384da2f5876534073996a956ac41d26037b6dd02c8103d412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                  "scriptString":"72 0x3045022100bc7c386d9c3740a4817eedf0f193047fa3728f1a6e0bb531c4fb37321f8d44d3022058054d8e0b45215af9384da2f5876534073996a956ac41d26037b6dd02c8103d41 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                  "output":{
+                     "satoshis":546,
+                     "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                  }
+               },
+               {
+                  "prevTxId":"ecd3f4b47128cbfe0dafb3640b728dd501ea4cbc63c90abd46e4e825e3f98dd0",
+                  "outputIndex":1,
+                  "sequenceNumber":4294967295,
+                  "script":"47304402204505ec2ed131e9075ae295bbbc27636a16c01336f81f25c813c43dbaabd66fbf02206383b144689dff8ae957b5755a413b9e7e87a589d09f62695979ffdc167c0a07412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                  "scriptString":"71 0x304402204505ec2ed131e9075ae295bbbc27636a16c01336f81f25c813c43dbaabd66fbf02206383b144689dff8ae957b5755a413b9e7e87a589d09f62695979ffdc167c0a0741 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                  "output":{
+                     "satoshis":20000,
+                     "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                  }
+               }
+            ],
+            "outputs":[
+               {
+                  "satoshis":0,
+                  "script":"006a4e0b68656c6c6f20776f726c64"
+               },
+               {
+                  "satoshis":20000,
+                  "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+               }
+            ],
+            "nLockTime":0,
+            "changeScript":"OP_DUP OP_HASH160 20 0x161e9c31fbec37d9ecb297bf4b814c6e189dbe52 OP_EQUALVERIFY OP_CHECKSIG"
+         }
+         );
+        done()
+      })
+    })
+  });
 
   describe('bsv-coinselect', function() {
     describe('no coinselect', function() {
