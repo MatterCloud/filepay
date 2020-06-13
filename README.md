@@ -136,7 +136,7 @@ require('filepay').putFile({
 });
 ```
 
-# Manually Provide Input UTXO's
+# Manually Provide Input UTXOs and Unlocking Scripts
 
 By providing a `inputs` array, you can specify UTXO's to use.
 
@@ -157,11 +157,26 @@ filepay.send({
     feeb: 0.5,
     inputs: [
       {
-        "txid": "2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
-        "value": 546,
+        "txid": "19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
+        "value": 786,
         "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
-        "outputIndex": 1,
-        "required": true // Optional
+        "outputIndex": 2,
+        "required": true,
+        "unlockingScript": function(tx, index, satoshis, script, key) {
+          // Optional. Provide a acustom unlocking script for this custom utxo
+          // ...
+          // Convenience method 'filepay.signStandard' provided for standard p2pkh/p2pk
+          // return filepay.signStandard(tx, index, satoshis, script, key);
+          return bsv.Script();
+        }
+      },
+      {
+        "txid": "2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+        "value": 9305,
+        "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+        "outputIndex": 2,
+        "required": true
+        // assumes filepay.signStandard is used for unlockingScript
       }
     ],
     to: [
