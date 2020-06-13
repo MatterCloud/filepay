@@ -4,7 +4,7 @@ const bitcoin = require('bsv')
 const filepay = require('../index');
 const bsvCoinselect = filepay.coinselect;
 // Private Key for Demo Purpose Only
-const privKey = ''; //process.env.privKey
+const privKey = 'KxPpaGmowYWcSuGSLdt6fCLiRAJRcWCpke4B8Gsf59hghQ6AKvwV'; //process.env.privKey
 const address = new bitcoin.PrivateKey(privKey).toAddress()
 var options = {
   api_key: '',
@@ -1089,11 +1089,33 @@ describe('Extra', function() {
       })
     })
 
-    it('check change is generated correctly', function(done) {
+    it('check change is generated correctly 1 forced input', function(done) {
       const options = {
-        data: [{op: 78}, "hello world"],
+        data: ["hello world"],
         pay: {
           key: privKey,
+          inputs: [
+            {
+              "txid": "72f09e0ec141eefcc4788daa8ce1f56e82dc2645346d859e1e9ec8ef1cbcce70",
+              "value": 1000,
+              "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+              "outputIndex": 0,
+              "required": true
+            },
+            {
+              "txid": "2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+              "value": 9305,
+              "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+              "outputIndex": 2,
+              "required": true
+            }
+          ],
+          to: [
+            {
+              script: '76a914801c259a527abd83a977fd90a06b22d215fcad4988ac',
+              value: 18500
+            }
+          ]
         }
       }
       filepay.build(options, function(err, tx) {
@@ -1102,6 +1124,7 @@ describe('Extra', function() {
         // and make a transaction that sends money to oneself
         // (since no receiver is specified)
         let generated = tx.toObject();
+        console.log('generated', tx.toString(), JSON.stringify(generated));
         assert.deepEqual(generated, {
           "hash":"28ef54cc59bc8b666aadfec76f0aec03834b50a0a7b3296f30497b1a4fdcc68c",
           "version":1,

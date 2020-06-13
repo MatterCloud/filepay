@@ -898,7 +898,6 @@ filepay.send({
 */
 
 
-
 /*
 filepay.send({
   data: ["hello world"],
@@ -921,7 +920,6 @@ filepay.send({
     ]
   }
 });
-
 */
 
 /*
@@ -950,5 +948,4 @@ filepay.send({
     ]
   }
 });
-
 */
