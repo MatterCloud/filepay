@@ -26,6 +26,185 @@ const defaults = {
   feeb: 1.4,
 }
 
+/**
+ * Will return the associated input scriptSig address information object
+ * @return {Address|boolean}
+ */
+var isPublicKeyHashIn = function (script) {
+  if (script.chunks.length === 2) {
+    var signatureBuf = script.chunks[0].buf
+    var pubkeyBuf = script.chunks[1].buf
+    if (signatureBuf &&
+      signatureBuf.length &&
+      signatureBuf[0] === 0x30 &&
+      pubkeyBuf &&
+      pubkeyBuf.length
+    ) {
+      var version = pubkeyBuf[0]
+      if ((version === 0x04 ||
+        version === 0x06 ||
+        version === 0x07) && pubkeyBuf.length === 65) {
+        return true
+      } else if ((version === 0x03 || version === 0x02) && pubkeyBuf.length === 33) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * @returns {boolean} if this is a pay to public key input script
+ */
+var isPublicKeyIn = function (script) {
+  if (script.chunks.length === 1) {
+    var signatureBuf = script.chunks[0].buf
+    if (signatureBuf &&
+      signatureBuf.length &&
+      signatureBuf[0] === 0x30) {
+      return true
+    }
+  }
+  return false
+}
+/**
+ * Builds a scriptSig (a script for an input) that signs a public key output script.
+ *
+ * @param {Signature|Buffer} signature - a Signature object, or the signature in DER canonical encoding
+ * @param {number=} sigtype - the type of the signature (defaults to SIGHASH_ALL)
+ */
+var buildPublicKeyIn = function (signature, sigtype) {
+  // $.checkArgument(signature instanceof Signature || Buffer.isBuffer(signature))
+  // $.checkArgument(_.isUndefined(sigtype) || _.isNumber(sigtype))
+  if (signature instanceof bitcoin.Signature) {
+    signature = signature.toBuffer()
+  }
+  var script = new Script()
+  script.add(Buffer.concat([
+    signature,
+    Buffer.from([(sigtype || bitcoin.Signature.SIGHASH_ALL) & 0xff])
+  ]))
+  return script
+}
+
+/**
+ * @returns {boolean} if this is a public key output script
+ */
+var isPublicKeyOut = function (script) {
+  if (script.chunks.length === 2 &&
+    script.chunks[0].buf &&
+    script.chunks[0].buf.length &&
+    script.chunks[1].opcodenum === bitcoin.Opcode.OP_CHECKSIG) {
+    var pubkeyBuf = script.chunks[0].buf
+    var version = pubkeyBuf[0]
+    var isVersion = false
+    if ((version === 0x04 ||
+      version === 0x06 ||
+      version === 0x07) && pubkeyBuf.length === 65) {
+      isVersion = true
+    } else if ((version === 0x03 || version === 0x02) && pubkeyBuf.length === 33) {
+      isVersion = true
+    }
+    if (isVersion) {
+      return PublicKey.isValid(pubkeyBuf)
+    }
+  }
+  return false
+}
+
+/**
+ * @returns {boolean} if this is a pay to pubkey hash output script
+ */
+var isPublicKeyHashOut = function (script) {
+  return !!(script.chunks.length === 5 &&
+    script.chunks[0].opcodenum === bitcoin.Opcode.OP_DUP &&
+    script.chunks[1].opcodenum === bitcoin.Opcode.OP_HASH160 &&
+    script.chunks[2].buf &&
+    script.chunks[2].buf.length === 20 &&
+    script.chunks[3].opcodenum === bitcoin.Opcode.OP_EQUALVERIFY &&
+    script.chunks[4].opcodenum === bitcoin.Opcode.OP_CHECKSIG)
+}
+
+/**
+ * Builds a scriptSig (a script for an input) that signs a public key hash
+ * output script.
+ *
+ * @param {Buffer|string|PublicKey} publicKey
+ * @param {Signature|Buffer} signature - a Signature object, or the signature in DER canonical encoding
+ * @param {number=} sigtype - the type of the signature (defaults to SIGHASH_ALL)
+ */
+var buildPublicKeyHashIn = function (publicKey, signature, sigtype) {
+  // $.checkArgument(signature instanceof Signature || Buffer.isBuffer(signature))
+  // $.checkArgument(_.isUndefined(sigtype) || _.isNumber(sigtype))
+
+  // Assume Signature object hack
+  //if (signature instanceof bitcoin.Signature) {
+    signature = signature.toBuffer()
+  //}
+  var script = new bitcoin.Script()
+    .add(Buffer.concat([
+      signature,
+      Buffer.from([(sigtype || bitcoin.Signature.SIGHASH_ALL) & 0xff])
+    ]))
+    .add(new bitcoin.PublicKey(publicKey).toBuffer())
+  return script
+}
+
+var signStandard = function(tx, index, satoshis, script, key) {
+  let unlockingScript;
+  const privKey = new bitcoin.PrivateKey(key);
+  const pubKey = privKey.publicKey;
+  const sigtype = bitcoin.crypto.Signature.SIGHASH_ALL | bitcoin.crypto.Signature.SIGHASH_FORKID;
+  const flags = bitcoin.Script.Interpreter.SCRIPT_VERIFY_MINIMALDATA | bitcoin.Script.Interpreter.SCRIPT_ENABLE_SIGHASH_FORKID | bitcoin.Script.Interpreter.SCRIPT_ENABLE_MAGNETIC_OPCODES | bitcoin.Script.Interpreter.SCRIPT_ENABLE_MONOLITH_OPCODES;
+  const signature = bitcoin.Transaction.sighash.sign(tx, privKey, sigtype, index, script, new bitcoin.crypto.BN(satoshis), flags);
+  if (isPublicKeyOut(script)) {
+    unlockingScript = buildPublicKeyIn(signature, sigtype);
+  } else if (isPublicKeyHashOut(script)) {
+    unlockingScript = buildPublicKeyHashIn(pubKey, signature, sigtype);
+  } else {
+    throw new Error('Non-standard script');
+  }
+  return unlockingScript;
+}
+
+/**
+ * Custom signing of a transaction similar to bsv.js 1.5.3.
+ *
+ * The difference is that we first "sign" the inputs with `unlockingScript` function return.
+ * After the inputs with a provided `unlockingScript` are paired with the unlocking scripts, then
+ * attempt to apply the provided `key` against all other inputs (checking script types p2pkh, p2pk, etc)
+ *
+ * This provides enough functionality to use any custom locking script UTXO as inputs.
+ *
+ * @param {*} tx Transaction to sign
+ * @param {*} txoutMapToUnlockingScript - Map `txid-outputIndex` -> function(tx, prevTxId, outputIndex): Script
+ * @param {*} key Private key to sign any inputs that do not have a manually provided unlocking script
+ */
+var signCustom = function(tx, txoutMapToUnlockingScript, key) {
+  // Apply any manual unlocking scripts if there utxos with unlockingScript function
+  for (let i = 0; i < tx.inputs.length; i++) {
+    const prevTxId = tx.inputs[i].prevTxId.toString('hex');
+    const outputIndex = tx.inputs[i].outputIndex;
+    const hasUnlockingScript = txoutMapToUnlockingScript.get(`${prevTxId}-${outputIndex}`);
+    if (!hasUnlockingScript) {
+      continue;
+    }
+    tx.inputs[i].setScript(hasUnlockingScript(tx, i, tx.inputs[i].output.satoshis, tx.inputs[i].output.script, key));
+  }
+  // Apply the defaults if any
+  for (let i = 0; i < tx.inputs.length; i++) {
+    const prevTxId = tx.inputs[i].prevTxId.toString('hex');
+    const outputIndex = tx.inputs[i].outputIndex;
+    const hasUnlockingScript = txoutMapToUnlockingScript.get(`${prevTxId}-${outputIndex}`);
+    // Ignore if there is a locking script
+    if (hasUnlockingScript) {
+      continue;
+    }
+    tx.inputs[i].setScript(signStandard(tx, i, tx.inputs[i].output.satoshis, tx.inputs[i].output.script, key));
+  }
+  return tx;
+}
+
 var dedupUtxosPreserveRequiredIfFound = function(inputs) {
   // Standardize up the inputs bcause some libriares need 'amount' and some 'value'
   let modifiedInputs = [];
@@ -173,8 +352,16 @@ var build = function(options, callback) {
         return;
       }
       let tx = buildTransactionInputsOutputs(coinSelectedBuiltTx.inputs, coinSelectedBuiltTx.outputs);
-      tx.change(address);
-      let transaction = tx.sign(privateKey);
+      // Track a mapping  of txid+index -> unlockingScript functions
+      const utxoUnlockingMap = new Map();
+      for (const utxo of utxos) {
+        if (utxo.unlockingScript) {
+          utxoUnlockingMap.set(utxo.txid + '-' + utxo.outputIndex, utxo.unlockingScript);
+        }
+      }
+      // Do not use bitcoin.Transaction.sign because it makes assumptions about the inputs
+      // Instead we sign each input in turn using sensible defaults and calling back to unlockingScript functions if provided.
+      let transaction = signCustom(tx, utxoUnlockingMap, key);
       innerCallback(null, transaction);
     }
 
@@ -187,7 +374,7 @@ var build = function(options, callback) {
           callback(null, tx);
           return;
         }
-        // On the other hand, the manual inputs are  inadequate, then lookup extra utxos
+        // On the other hand, the manual inputs are inadequate, then lookup extra utxos
         connect(options).getUnspentUtxos(address, function(err, utxos) {
           if (err) {
             callback(err, null);
@@ -597,6 +784,7 @@ module.exports = {
   connect: connect,
   data2script: data2script,
   coinselect: bsvCoinselect,
+  signStandard: signStandard,
 }
 
 /*
@@ -649,3 +837,35 @@ filepay.send({
 */
 // Example: https://whatsonchain.com/tx/25418da84000051d43776370cc671278241177dcff424c7618fc9dc5b6fa7fdf
 
+/*
+filepay.send({
+  data: ["hello world"],
+  pay: {
+    key: privKey,
+    inputs: [
+      {
+        "txid": "19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
+        "value": 786,
+        "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+        "outputIndex": 2,
+        "required": true,
+        "unlockingScript": function(tx, index, satoshis, script, key) {
+          // Optional. Provide a acustom unlocking script for this custom utxo
+          // ...
+          // Convenience method 'filepay.signStandard' provided for standard p2pkh/p2pk
+          // return filepay.signStandard(tx, index, satoshis, script, key);
+          return bsv.Script();
+        }
+      },
+      {
+        "txid": "2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+        "value": 9305,
+        "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+        "outputIndex": 2,
+        "required": true
+        // assumes filepay.signStandard is used for unlockingScript
+      }
+    ]
+  }
+});
+*/

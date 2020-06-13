@@ -1,4 +1,4 @@
-require('dotenv').config()
+ require('dotenv').config()
 const assert = require('assert');
 const bitcoin = require('bsv')
 const filepay = require('../index');
@@ -6,8 +6,6 @@ const bsvCoinselect = filepay.coinselect;
 // Private Key for Demo Purpose Only
 const privKey = ''; //process.env.privKey
 const address = new bitcoin.PrivateKey(privKey).toAddress()
-var utxoSize;
-
 var options = {
   api_key: '',
 }
@@ -844,7 +842,6 @@ describe('Extra', function() {
              }
           ],
           "nLockTime":0,
-          "changeScript":"OP_DUP OP_HASH160 20 0x161e9c31fbec37d9ecb297bf4b814c6e189dbe52 OP_EQUALVERIFY OP_CHECKSIG"
         });
         done()
       })
@@ -983,6 +980,156 @@ describe('Extra', function() {
             "changeScript":"OP_DUP OP_HASH160 20 0x161e9c31fbec37d9ecb297bf4b814c6e189dbe52 OP_EQUALVERIFY OP_CHECKSIG"
          }
          );
+        done()
+      })
+    })
+
+    it('1 insufficient input and force specific input utxo provide unlocking script', function(done) {
+      const address = new bitcoin.PrivateKey(privKey).toAddress();
+
+      /**
+       * Perform basic p2pkh type signing of an arbitrary input.
+       *
+       * @param {*} tx Transaction used for signing
+       * @param {*} index index of the input
+       * @param {*} satoshis satoshi of the input
+       * @param {*} script script of the input
+       * @param {*} key private key that can sign
+       */
+      function signBasic(tx, index, satoshis, script, key) {
+        const privKey = new bitcoin.PrivateKey(key);
+        const publicKey = privKey.publicKey;
+        const sigtype = bitcoin.crypto.Signature.SIGHASH_ALL | bitcoin.crypto.Signature.SIGHASH_FORKID;
+        const flags = bitcoin.Script.Interpreter.SCRIPT_VERIFY_MINIMALDATA | bitcoin.Script.Interpreter.SCRIPT_ENABLE_SIGHASH_FORKID | bitcoin.Script.Interpreter.SCRIPT_ENABLE_MAGNETIC_OPCODES | bitcoin.Script.Interpreter.SCRIPT_ENABLE_MONOLITH_OPCODES;
+        let signature = bitcoin.Transaction.sighash.sign(tx, privKey, sigtype, index, script, new bitcoin.crypto.BN(satoshis), flags);
+        signature = signature.toBuffer()
+        var script = new bitcoin.Script()
+          .add(Buffer.concat([
+            signature,
+            Buffer.from([(sigtype || bitcoin.Signature.SIGHASH_ALL) & 0xff])
+          ]))
+          .add(new bitcoin.PublicKey(publicKey).toBuffer())
+        return script;
+      }
+
+      const options = {
+        data: ["hello world"],
+        pay: {
+          key: privKey,
+          inputs: [
+            {
+              "txid": "19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
+              "value": 786,
+              "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+              "outputIndex": 2,
+              "required": true,
+              "unlockingScript": function(tx, index, satoshis, script, key) {
+                console.log('-------unlockingScript-------');
+                console.log(tx, index, satoshis, script, key);
+                return signBasic(tx, index, satoshis, script, key);
+              }
+            },
+            {
+              "txid": "2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+              "value": 9305,
+              "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+              "outputIndex": 2,
+              "required": true
+            }
+          ]
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        console.log('generated', JSON.stringify(generated), tx.toString());
+        assert.deepEqual(generated,{
+          "hash":"61cdbde68c788e2616a1acc1eeaea86997c7e6379adc5a289afc609bce1a8aa9",
+          "version":1,
+          "inputs":[
+             {
+                "prevTxId":"2f65137399213afad9804662329cf2351e46a624f9ab61a3a9e45adedb1cebbe",
+                "outputIndex":2,
+                "sequenceNumber":4294967295,
+                "script":"47304402203492e8e9036ee411d317c3f9cf02650540421c9517b7c8dc96ece6d44705514a02206f19031f62f03eaa4241eb1a5b131bc7a66ed124d8e5b77301a4f9a703858bcc412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "scriptString":"71 0x304402203492e8e9036ee411d317c3f9cf02650540421c9517b7c8dc96ece6d44705514a02206f19031f62f03eaa4241eb1a5b131bc7a66ed124d8e5b77301a4f9a703858bcc41 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "output":{
+                   "satoshis":9305,
+                   "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                }
+             },
+             {
+                "prevTxId":"19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
+                "outputIndex":2,
+                "sequenceNumber":4294967295,
+                "script":"483045022100bc2b3b59c65457e240f81df9528774ffcecabce3bcf231b774ce2e0163b2a52702207b81a8e0671c76f19480ec80e540e19964428589c126fcfecaba90df5df6cfe0412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "scriptString":"72 0x3045022100bc2b3b59c65457e240f81df9528774ffcecabce3bcf231b774ce2e0163b2a52702207b81a8e0671c76f19480ec80e540e19964428589c126fcfecaba90df5df6cfe041 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "output":{
+                   "satoshis":786,
+                   "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                }
+             }
+          ],
+          "outputs":[
+             {
+                "satoshis":0,
+                "script":"006a0b68656c6c6f20776f726c64"
+             },
+             {
+                "satoshis":9898,
+                "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+             }
+          ],
+          "nLockTime":0
+        });
+        done()
+      })
+    })
+
+    it('check change is generated correctly', function(done) {
+      const options = {
+        data: [{op: 78}, "hello world"],
+        pay: {
+          key: privKey,
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        assert.deepEqual(generated, {
+          "hash":"28ef54cc59bc8b666aadfec76f0aec03834b50a0a7b3296f30497b1a4fdcc68c",
+          "version":1,
+          "inputs":[
+             {
+                "prevTxId":"19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
+                "outputIndex":1,
+                "sequenceNumber":4294967295,
+                "script":"483045022100d11235ec86e7dac995be3f6f52b5f8070b9b119318a78f36d73c9efc47492c2a02204a4f511a8486c06bf84f7c9f8e09159674c23568f8487aa3f287e6b43d8c67e5412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "scriptString":"72 0x3045022100d11235ec86e7dac995be3f6f52b5f8070b9b119318a78f36d73c9efc47492c2a02204a4f511a8486c06bf84f7c9f8e09159674c23568f8487aa3f287e6b43d8c67e541 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "output":{
+                   "satoshis":20000,
+                   "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+                }
+             }
+          ],
+          "outputs":[
+             {
+                "satoshis":0,
+                "script":"006a4e0b68656c6c6f20776f726c64"
+             },
+             {
+                "satoshis":19873,
+                "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+             }
+          ],
+          "nLockTime":0
+       });
         done()
       })
     })
@@ -1458,8 +1605,6 @@ describe('Extra', function() {
         ]
       });
     })
-
   })
-
 })
 
