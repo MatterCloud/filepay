@@ -152,6 +152,15 @@ var buildPublicKeyHashIn = function (publicKey, signature, sigtype) {
   return script
 }
 
+/**
+ * Detect and sign p2pkh or p2pk inputs
+ *
+ * @param {*} tx Transaction for signature
+ * @param {*} index Input index
+ * @param {*} satoshis Satoshi for input
+ * @param {*} script Script for input
+ * @param {*} key Signing key
+ */
 var signStandard = function(tx, index, satoshis, script, key) {
   let unlockingScript;
   const privKey = new bitcoin.PrivateKey(key);
@@ -169,6 +178,23 @@ var signStandard = function(tx, index, satoshis, script, key) {
   return unlockingScript;
 }
 
+/**
+ * sign p2pkh-like input. Convenience function
+ *
+ * @param {*} tx Transaction for signature
+ * @param {*} index Input index
+ * @param {*} satoshis Satoshi for input
+ * @param {*} script Script for input
+ * @param {*} key Signing key
+ */
+var signStandardLike = function(tx, index, satoshis, script, key) {
+  const privKey = new bitcoin.PrivateKey(key);
+  const pubKey = privKey.publicKey;
+  const sigtype = bitcoin.crypto.Signature.SIGHASH_ALL | bitcoin.crypto.Signature.SIGHASH_FORKID;
+  const flags = bitcoin.Script.Interpreter.SCRIPT_VERIFY_MINIMALDATA | bitcoin.Script.Interpreter.SCRIPT_ENABLE_SIGHASH_FORKID | bitcoin.Script.Interpreter.SCRIPT_ENABLE_MAGNETIC_OPCODES | bitcoin.Script.Interpreter.SCRIPT_ENABLE_MONOLITH_OPCODES;
+  const signature = bitcoin.Transaction.sighash.sign(tx, privKey, sigtype, index, script, new bitcoin.crypto.BN(satoshis), flags);
+  return buildPublicKeyHashIn(pubKey, signature, sigtype);
+}
 /**
  * Custom signing of a transaction similar to bsv.js 1.5.3.
  *
@@ -256,7 +282,6 @@ var buildTransactionInputsOutputs = function(inputs, outputs) {
       }
     }
   }
-  // console.log('buildTransactionInputsOutputs return', JSON.stringify(tx));
   return tx;
 }
 
@@ -788,6 +813,7 @@ module.exports = {
   data2script: data2script,
   coinselect: bsvCoinselect,
   signStandard: signStandard,
+  signStandardLike: signStandardLike
 }
 
 /*
@@ -871,6 +897,62 @@ filepay.send({
     ]
   }
 });
+*/
+
+
+
+/*
+filepay.send({
+  data: ["hello world"],
+  pay: {
+    key: privKey,
+    inputs: [
+      {
+        "txid": "19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
+        "value": 786,
+        "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+        "outputIndex": 2,
+        "required": true,
+        "unlockingScript": function(tx, index, satoshis, script, key) {
+          // Optional. Provide a acustom unlocking script for this custom utxo
+          // ...
+          // Convenience method 'filepay.signStandard' provided for standard p2pkh/p2pk
+          return filepay.signStandard(tx, index, satoshis, script, key);
+        }
+      }
+    ]
+  }
+});
+
+*/
+
+/*
+filepay.send({
+  data: ["hello world"],
+  pay: {
+    key: privKey,
+    inputs: [
+      {
+        "txid": "19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
+        "value": 786,
+        "script": "76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac",
+        "outputIndex": 2,
+        "required": true,
+        "unlockingScript": function(tx, index, satoshis, script, key) {
+          // Optional. Provide a acustom unlocking script for this custom utxo
+          // ...
+          // Convenience method 'filepay.signStandard' provided for standard p2pkh/p2pk
+          // return filepay.signStandard(tx, index, satoshis, script, key);
+
+          // ---------- CUSTOM UNLOCKING EXAMPLE ---------
+          // To unlock any custom p2pkh-like locking script....
+          return filepay.signStandardLike(tx, index, satoshis, script, key);
+        }
+      }
+    ]
+  }
+});
+
 */
 }).call(this,require("buffer").Buffer)
 },{"axios":2,"bsv":37,"bsv-coinselect":35,"buffer":177,"buffer/":84,"mingo":121,"text-encoder":126}],2:[function(require,module,exports){
