@@ -6444,10 +6444,10 @@ function finalize (inputs, outputs, feeRate, changeScript) {
 
   // is it worth a change output?
   if (remainderAfterExtraOutput > dustThreshold({}, feeRate)) {
-    if (changeScript || changeScript === null) {
+    if (changeScript) {
       outputs = outputs.concat({
         value: Math.round(remainderAfterExtraOutput) - 1,
-        script: changeScript ? changeScript : undefined,
+        script: changeScript,
       })
     }
   }
@@ -6458,6 +6458,12 @@ function finalize (inputs, outputs, feeRate, changeScript) {
     var fee = Math.round(Math.ceil(feeRate * bytesAccum));
     return { fee: fee }
   }
+
+  // Emergency cap for fee (0.1 BSV) which is enough for 20MB * 0.5 sat/byte
+  if (fee > 10000000) {
+    throw new Error('Filepay Error: Too large fee');
+  }
+
   return {
     inputs: inputs,
     outputs: outputs,
