@@ -788,6 +788,83 @@ describe('Extra', function() {
     })
   })
   describe('provide manual inputs current', function() {
+    it('Check change is generated', function(done) {
+      function buildNBKeyOut(to) {
+        if (to instanceof bitcoin.PublicKey) {
+          to = to.toAddress()
+        } else if (typeof to ==='string') {
+          to = new bitcoin.Address(to)
+        }
+        var s = new bitcoin.Script()
+        s.add(bitcoin.Opcode.OP_2DROP)
+          .add(bitcoin.Opcode.OP_DUP)
+          .add(bitcoin.Opcode.OP_HASH160)
+          .add(to.hashBuffer)
+          .add(bitcoin.Opcode.OP_EQUALVERIFY)
+          .add(bitcoin.Opcode.OP_CHECKSIG)
+        s._network = to.network
+        return s
+      }
+      const address = new bitcoin.PrivateKey(privKey).toAddress()
+      const s = buildNBKeyOut(address);
+      const options = {
+        data: ["hello world"],
+        pay: {
+          key: privKey,
+          inputs: [
+            {
+              "txid": "49f366aae0b6b58474cca308af49e4961ede8e0af6327422389eddca615d6b1d",
+              "value": 10000,
+              "script": "76a91418dc40d469c624fab7c9ad9fd7aed36d4446f04b88ac",
+              "outputIndex": 0,
+              "required": true,
+            }
+          ],
+          to: [{ script: s, value: 601 }]
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        assert.deepEqual(generated, {
+          "hash":"666bff4e62d0a290552ca2c61b808ada6ea259ad051be77963430f96c712ab07",
+          "version":1,
+          "inputs":[
+             {
+                "prevTxId":"49f366aae0b6b58474cca308af49e4961ede8e0af6327422389eddca615d6b1d",
+                "outputIndex":0,
+                "sequenceNumber":4294967295,
+                "script":"463043021f60bd75f68c8a6560d947cd7ac2c316f62ec1809da3e9f5a9513a5078981e130220718096a5cd6245f4e00856138bc840e535c717cfe2600acdc739aa2b295e37d6412102119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "scriptString":"70 0x3043021f60bd75f68c8a6560d947cd7ac2c316f62ec1809da3e9f5a9513a5078981e130220718096a5cd6245f4e00856138bc840e535c717cfe2600acdc739aa2b295e37d641 33 0x02119ebe4639964590bcf358539740f8ea4b6546b8416cbbbf6de12fafd3a13d1a",
+                "output":{
+                   "satoshis":10000,
+                   "script":"76a91418dc40d469c624fab7c9ad9fd7aed36d4446f04b88ac"
+                }
+             }
+          ],
+          "outputs":[
+             {
+                "satoshis":0,
+                "script":"006a0b68656c6c6f20776f726c64"
+             },
+             {
+                "satoshis":601,
+                "script":"6d76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+             },
+             {
+                "satoshis":9250,
+                "script":"76a914161e9c31fbec37d9ecb297bf4b814c6e189dbe5288ac"
+             }
+          ],
+          "nLockTime":0
+       });
+        done()
+      })
+    });
+
     it('1 sufficient input using parent key', function(done) {
       const address = new bitcoin.PrivateKey(privKey).toAddress()
       const options = {

@@ -280,7 +280,27 @@ var buildTransactionInputsOutputs = function(inputs, outputs) {
       }
     }
   }
-  return tx;
+
+  // Safety check to ensure fee never goes greater than 0.1 BSV
+  let sumInputValues = 0;
+  let sumOutputValues = 0;
+  for (const input of tx.inputs) {
+    sumInputValues += input.output.satoshis;
+  }
+  for (const output of tx.outputs) {
+    sumOutputValues += output.satoshis;
+  }
+
+  // --------------------------------------------------
+  // The fee would be greater than 0.1 BSV
+  // There's no need for that big of a fee since miners are mining 10MB tx max size at 0.5 sat/byte
+  if (!isNaN(sumInputValues) && !isNaN(sumOutputValues) &&
+    sumInputValues >= 0 && sumOutputValues >= 0 &&
+    (sumInputValues - sumOutputValues <= 10000000)) {
+    return tx;
+  }
+  // Limit can be changed in future.  For now throw Error
+  throw new Error('Too large fee error');
 }
 
 var selectCoins = function(utxos, outputs, feeRate, changeScript) {
@@ -367,6 +387,8 @@ var build = function(options, callback) {
               script: receiver.script,
               value: receiver.value
             });
+          } else {
+            throw new Error('Invalid to. Required script and value');
           }
         });
       }

@@ -282,7 +282,27 @@ var buildTransactionInputsOutputs = function(inputs, outputs) {
       }
     }
   }
-  return tx;
+
+  // Safety check to ensure fee never goes greater than 0.1 BSV
+  let sumInputValues = 0;
+  let sumOutputValues = 0;
+  for (const input of tx.inputs) {
+    sumInputValues += input.output.satoshis;
+  }
+  for (const output of tx.outputs) {
+    sumOutputValues += output.satoshis;
+  }
+
+  // --------------------------------------------------
+  // The fee would be greater than 0.1 BSV
+  // There's no need for that big of a fee since miners are mining 10MB tx max size at 0.5 sat/byte
+  if (!isNaN(sumInputValues) && !isNaN(sumOutputValues) &&
+    sumInputValues >= 0 && sumOutputValues >= 0 &&
+    (sumInputValues - sumOutputValues <= 10000000)) {
+    return tx;
+  }
+  // Limit can be changed in future.  For now throw Error
+  throw new Error('Too large fee error');
 }
 
 var selectCoins = function(utxos, outputs, feeRate, changeScript) {
@@ -369,6 +389,8 @@ var build = function(options, callback) {
               script: receiver.script,
               value: receiver.value
             });
+          } else {
+            throw new Error('Invalid to. Required script and value');
           }
         });
       }
@@ -6370,12 +6392,35 @@ var TX_INPUT_PUBKEYHASH = (107) * 2;
 var TX_OUTPUT_BASE = (8 + 1) * 2;
 var TX_OUTPUT_PUBKEYHASH = (25) * 2
 var TX_DUST_THRESHOLD = 546;
+
+/**
+ * Take care to check string or Script length
+ */
 function inputBytes (input) {
-  return TX_INPUT_BASE + (input.script ? input.script.length : TX_INPUT_PUBKEYHASH)
+  var scriptLen = 0;
+  if (input.script && input.script.toHex) {
+    scriptLen = (input.script.toHex()).length;
+  } else if (input.script) {
+    scriptLen = input.script.length;
+  } else {
+    scriptLen = TX_INPUT_PUBKEYHASH;
+  }
+  return TX_INPUT_BASE + scriptLen;
 }
 
+/**
+ * Take care to check string or Script length
+ */
 function outputBytes (output) {
-  return TX_OUTPUT_BASE + (output.script ? output.script.length / 2 : TX_OUTPUT_PUBKEYHASH)
+  var scriptLen = 0;
+  if (output.script && output.script.toHex) {
+    scriptLen = (output.script.toHex()).length / 2;
+  } else if (output.script) {
+    scriptLen = output.script.length / 2;
+  } else {
+    scriptLen = TX_OUTPUT_PUBKEYHASH;
+  }
+  return TX_OUTPUT_BASE + scriptLen;
 }
 
 function dustThreshold (output, feeRate) {
@@ -6384,9 +6429,14 @@ function dustThreshold (output, feeRate) {
 }
 
 function transactionBytes (inputs, outputs) {
-  return TX_EMPTY_SIZE +
-    inputs.reduce(function (a, x) { return a + inputBytes(x) }, 0) +
-    outputs.reduce(function (a, x) { return a + outputBytes(x) }, 0)
+  // We have to seperate out the variables or we get a NaN
+  // Strange why the function worked before
+  const inSum = inputs.reduce(function (a, x) { return a + inputBytes(x) }, 0);
+  const outSum = outputs.reduce(function (a, x) { return a + outputBytes(x) }, 0);
+  if (isNaN(inSum) || isNaN(outSum)) {
+    throw new Error('Input outputs isNaN');
+  }
+  return TX_EMPTY_SIZE + inSum + outSum;
 }
 
 function uintOrNaN (v) {
@@ -6428,7 +6478,6 @@ function addRequiredInputs(inputs) {
       nonRequiredInputs.push(input);
     }
   }
-
   return {
     bytesAccum: bytesAccum,
     requiredInputs: requiredInputs,
