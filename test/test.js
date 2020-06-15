@@ -1116,14 +1116,14 @@ describe('Extra', function() {
           ]
         }
       }
-      filepay.build(options, function(err, tx) {
+      filepay.build(options, function(err, tx, fee) {
         // If only 'key' is included, it will use the default values for
         // rest of the pay attributes
         // and make a transaction that sends money to oneself
         // (since no receiver is specified)
         let generated = tx.toObject();
         console.log('generated', JSON.stringify(generated), tx.toString());
-        assert.deepEqual(generated,{
+        assert.deepEqual(generated, {
           "hash":"61cdbde68c788e2616a1acc1eeaea86997c7e6379adc5a289afc609bce1a8aa9",
           "version":1,
           "inputs":[

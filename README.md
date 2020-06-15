@@ -300,7 +300,7 @@ const tx = {
   safe: true,
   data: ["0x6d02", "hello world"]
 }
-filepay.build(tx, function(err, tx) {
+filepay.build(tx, function(err, tx, fee) {
   /**
   * res contains the generated transaction object, powered by bsv
   * You can check it out at https://github.com/moneybutton/bsv/blob/master/lib/transaction/transaction.js
@@ -335,7 +335,7 @@ const tx = {
   safe: true,
   data: ["0x6d02", Buffer.from("Abc"), "hello world"]
 }
-filepay.build(tx, function(err, tx) {
+filepay.build(tx, function(err, tx, fee) {
   /**
   * res contains the generated transaction object, powered by bsv
   * You can check it out at https://github.com/moneybutton/bsv/blob/master/lib/transaction/transaction.js
@@ -376,7 +376,7 @@ This is useful if you want to export a transaction and later recover it.
 const tx = {
   data: "6a04366430320b68656c6c6f20776f726c64"
 }
-filepay.build(tx, function(err, tx) {
+filepay.build(tx, function(err, tx, fee) {
   /**
   * res contains the generated transaction object, powered by bsv
   * You can check it out at https://github.com/moneybutton/bsv/blob/master/lib/transaction/transaction.js
@@ -411,7 +411,7 @@ const tx = {
   data: ["0x6d02", "hello world"],
   pay: { key: "5JZ4RXH4MoXpaUQMcJHo8DxhZtkf5U5VnYd9zZH8BRKZuAbxZEw" }
 }
-filepay.build(tx, function(err, tx) {
+filepay.build(tx, function(err, tx, fee) {
   /**
   * res contains the generated transaction object
   * (a signed transaction, since 'key' is included)
@@ -559,7 +559,7 @@ const tx = {
     }
   }
 }
-filepay.build(tx, function(err, tx) {
+filepay.build(tx, function(err, tx, fee) {
   /**
   * res contains the generated transaction object
   * (a signed transaction, since 'key' is included)
@@ -578,7 +578,7 @@ You may want to import a previously exported transaction. This is when you use t
 ```
 filepay.build({
   tx: "01000000014182e9844c2979d973d3e82c55d57e1a971ed2e5473557ce0414864612911aa5010000006b48304502210098f8f32cd532bc73eef1e01c3d359caf0a7aa8f3dc1eebb8011d80810c9dbe66022054c6b23d5bd9573a1e6135c39dcc31a65cab91f3b3db781995e824614e24bad9412102d024c1861ccc655ce3395bc4d8a0bdcfb929ffcd9d1a8c81d8c6fa1dfb9bd70cffffffff020000000000000000106a026d020b68656c6c6f20776f726c64c2ff0000000000001976a9142a3a6886d98776d0197611e5328ba8806c3739db88ac00000000"
-}, function(err, tx) {
+}, function(err, tx, fee) {
   // 'tx' is a transaction object
 })
 ```
@@ -594,7 +594,7 @@ filepay.build({
   pay: {
     key: "5JZ4RXH4MoXpaUQMcJHo8DxhZtkf5U5VnYd9zZH8BRKZuAbxZEw"
   }
-}, function(err, tx) {
+}, function(err, tx, fee) {
   // 'tx' is a signed transaction object
 })
 ```

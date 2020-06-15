@@ -257,6 +257,21 @@ var dedupUtxosPreserveRequiredIfFound = function(inputs) {
   }
   return modifiedInputs;
 }
+var calculateFee = function(inputs, outputs) {
+  let inputSum = 0;
+  let outputSum = 0;
+  if (inputs) {
+    for (const input of inputs) {
+      inputSum += input.value;
+    }
+  }
+  if (outputs) {
+    for (const output of outputs) {
+      outputSum += output.value;
+    }
+  }
+  return inputSum - outputSum;
+}
 
 var buildTransactionInputsOutputs = function(inputs, outputs) {
   // Standardize up the inputs bcause some libriares need 'amount' and some 'value'
@@ -353,11 +368,11 @@ var build = function(options, callback) {
      */
     const processWithUtxos = function(err, utxos, innerCallback) {
       if (err) {
-        innerCallback ? innerCallback(err, null) : '';
+        innerCallback ? innerCallback(err, null, null) : '';
         return;
       }
       if (!utxos || !utxos.length) {
-        innerCallback ? innerCallback('Error: No available utxos', null) : '';
+        innerCallback ? innerCallback('Error: No available utxos', null, null) : '';
         return;
       }
       if (options.pay.filter && options.pay.filter.q && options.pay.filter.q.find) {
@@ -398,10 +413,11 @@ var build = function(options, callback) {
       let feeb = (options.pay && options.pay.feeb) ? options.pay.feeb : 0.5;
       const coinSelectedBuiltTx = selectCoins(dedupUtxosPreserveRequiredIfFound(utxos), desiredOutputs, feeb, bitcoin.Script.fromAddress(address).toHex());
       if (!coinSelectedBuiltTx.inputs || !coinSelectedBuiltTx.outputs) {
-        innerCallback('Insufficient input utxo', null);
+        innerCallback('Insufficient input utxo', null, null);
         return;
       }
       let tx = buildTransactionInputsOutputs(coinSelectedBuiltTx.inputs, coinSelectedBuiltTx.outputs);
+      let actualFee = calculateFee(coinSelectedBuiltTx.inputs, coinSelectedBuiltTx.outputs);
       // Track a mapping  of txid+index -> unlockingScript functions
       const utxoUnlockingMap = new Map();
       for (const utxo of utxos) {
@@ -412,45 +428,45 @@ var build = function(options, callback) {
       // Do not use bitcoin.Transaction.sign because it makes assumptions about the inputs
       // Instead we sign each input in turn using sensible defaults and calling back to unlockingScript functions if provided.
       let transaction = signCustom(tx, utxoUnlockingMap, key);
-      innerCallback(null, transaction);
+      innerCallback(null, transaction, actualFee);
     }
 
     // If custom inputs are provided, then attempt to use them
     if (options.pay.inputs && Array.isArray(options.pay.inputs)) {
-      processWithUtxos(null, options.pay.inputs, function(err, tx) {
+      processWithUtxos(null, options.pay.inputs, function(err, tx, fee) {
         // No error and the tx is valid given just the manual inputs
         // Therefore return because we had everything we needed with the manual inputs to fulfil total fee/outputs
         if (!err && tx) {
-          callback(null, tx);
+          callback(null, tx, fee);
           return;
         }
         // On the other hand, the manual inputs are inadequate, then lookup extra utxos
         connect(options).getUnspentUtxos(address, function(err, utxos) {
           if (err) {
-            callback(err, null);
+            callback(err, null, null);
             return;
           }
           // Merge the provided utxos with the retrieved ones then
           let mergedUtxos = utxos.concat(options.pay.inputs);
-          processWithUtxos(null, mergedUtxos, function(err, tx) {
-            callback(err, tx);
+          processWithUtxos(null, mergedUtxos, function(err, tx, fee) {
+            callback(err, tx, fee);
           });
         })
         .catch((ex) => {
             console.log('Filepay build ex', ex);
-            callback(ex, null);
+            callback(ex, null, null);
         });
       });
     } else {
       // No manual utxos provided, lookup all of them
       connect(options).getUnspentUtxos(address, function(err, utxos) {
-        processWithUtxos(err, utxos, function(err, tx) {
-          callback(err, tx);
+        processWithUtxos(err, utxos, function(err, tx, fee) {
+          callback(err, tx, fee);
         });
       })
       .catch((ex) => {
           console.log('Filepay build ex', ex);
-          callback(ex, null);
+          callback(ex, null, null);
       });
     }
   } else {
@@ -490,7 +506,7 @@ var build = function(options, callback) {
         satoshis: out.value
       }));
     }
-    callback(null, tx)
+    callback(null, tx, null)
   }
 }
 
