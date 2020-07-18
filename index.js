@@ -448,6 +448,7 @@ var build = function(options, callback) {
           let mergedUtxos = utxos.concat(options.pay.inputs);
           processWithUtxos(null, mergedUtxos, function(err, tx, fee) {
             callback(err, tx, fee);
+            return;
           });
         })
         .catch((ex) => {

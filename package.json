@@ -1,6 +1,6 @@
 {
   "name": "filepay",
-  "version": "2.2.8",
+  "version": "2.2.10",
   "description": "Post data and upload files to bitcoin sv",
   "main": "index.js",
   "scripts": {
@@ -16,14 +16,14 @@
     "blockchain",
     "cryptocurrency"
   ],
-  "author": "MatterCloud (Matter Web Services Inc.)",
+  "author": "MATTERCLOUD (Matter Web Services Inc.)",
   "license": "MIT",
   "unpkg": "dist/filepay.min.js",
   "dependencies": {
     "axios": "^0.19.2",
     "bitcore-explorers": "^1.0.1",
     "bsv": "^1.5.3",
-    "bsv-coinselect": "^4.2.3",
+    "bsv-coinselect": "^4.2.5",
     "buffer": "^5.2.1",
     "mingo": "^2.2.4",
     "text-encoder": "0.0.4"
