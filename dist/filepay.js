@@ -542,7 +542,7 @@ var send = function(options, callback) {
     callback = function() {};
   }
 
-  build(options, function(err, tx) {
+  build(options, function(err, tx, fee) {
     if (err) {
       callback(err);
       return;
@@ -552,10 +552,10 @@ var send = function(options, callback) {
       { rawtx: tx.toString() },
       buildHeader(options),
     ).then((res) => {
-      callback(null, res.data.result.txid);
+      callback(null, res.data.result.txid, fee, tx.toString());
     }).catch((ex) => {
       console.log('filepay ex', ex);
-      callback(ex, null);
+      callback(ex, tx.hash, fee, tx.toString());
     });
   })
 }
