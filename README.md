@@ -95,6 +95,8 @@ filepay.send({
     rpc: "https://api.mattercloud.net",
     fee: 400, // Optional. For a fixed fix.
     feeb: 0.5,
+    changeAddress: '19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut', // Optional send change to this address instead of payment key address.
+    changeScript: '0393822...', // Optional hex encoded output script to send to. Overrides changeAddress if both provided.
     to: [
       {
         "data": ["19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", "Hello from inside a text file", "text/plain"],

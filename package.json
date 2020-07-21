@@ -1,12 +1,13 @@
 {
   "name": "filepay",
-  "version": "2.2.10",
+  "version": "2.2.12",
   "description": "Post data and upload files to bitcoin sv",
   "main": "index.js",
   "scripts": {
     "test": "mocha --timeout 30000",
     "test_scratch": "mocha --timeout 30000 --grep '1 insufficient input and force specific input utxo provide unlocking script'",
     "test_change": "mocha --timeout 30000 --grep 'Check change is generated'",
+    "test_change": "mocha --timeout 30000 --grep 'changeAddress'",
     "build": "browserify index.js --standalone filepay > dist/filepay.js && uglifyjs dist/filepay.js > dist/filepay.min.js"
   },
   "keywords": [

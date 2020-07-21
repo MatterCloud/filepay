@@ -783,6 +783,144 @@ describe('Extra', function() {
     })
   })
   describe('provide manual inputs current', function() {
+    it('Use changeAddress', function(done) {
+      const address = new bitcoin.PrivateKey(privKey).toAddress()
+      const addressChange = new bitcoin.Address.fromString('1FuLQ9jPwDm5g8pHnJ524h2BScRchavXU2');
+      const options = {
+        data: ["hello world"],
+        pay: {
+          key: privKey,
+          changeAddress: addressChange.toString(),
+          inputs: [
+            {
+              "txid": "49f366aae0b6b58474cca308af49e4961ede8e0af6327422389eddca615d6b1d",
+              "value": 10000,
+              "script": "76a91418dc40d469c624fab7c9ad9fd7aed36d4446f04b88ac",
+              "outputIndex": 0,
+              "required": true,
+            }
+          ],
+          to: [{ address: address, value: 601 }]
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        delete generated.hash;
+        for (const input of generated.inputs) {
+          delete input.script;
+          delete input.scriptString;
+          delete input.output.script;
+        }
+
+        for (let i = 0; i < generated.outputs.length - 1; i++) {
+          delete  generated.outputs[i].script;
+        }
+        assert.deepEqual(generated, {
+          "version":1,
+          "inputs":[
+             {
+                "prevTxId":"49f366aae0b6b58474cca308af49e4961ede8e0af6327422389eddca615d6b1d",
+                "outputIndex":0,
+                "sequenceNumber":4294967295,
+                "output":{
+                   "satoshis":10000
+                }
+             }
+          ],
+          "outputs":[
+             {
+                "satoshis":0,
+
+             },
+             {
+                "satoshis":601,
+
+             },
+             {
+                "satoshis":9251,
+                "script": (new bitcoin.Script.fromAddress(addressChange)).toHex()
+             }
+          ],
+          "nLockTime":0
+       });
+        done()
+      })
+    });
+
+    it('Use changeAddress and changeScript', function(done) {
+      const address = new bitcoin.PrivateKey(privKey).toAddress()
+      const addressChange = new bitcoin.Address.fromString('1FuLQ9jPwDm5g8pHnJ524h2BScRchavXU2');
+      const scriptChange = new bitcoin.Address.fromString('13pGkjahfpoLuZNsnR4rk6XaF8QZ6TbHW1');
+      const options = {
+        data: ["hello world"],
+        pay: {
+          key: privKey,
+          changeAddress: addressChange.toString(),
+          changeScript: (new bitcoin.Script.fromAddress(scriptChange)).toHex(),
+          inputs: [
+            {
+              "txid": "49f366aae0b6b58474cca308af49e4961ede8e0af6327422389eddca615d6b1d",
+              "value": 10000,
+              "script": "76a91418dc40d469c624fab7c9ad9fd7aed36d4446f04b88ac",
+              "outputIndex": 0,
+              "required": true,
+            }
+          ],
+          to: [{ address: address, value: 601 }]
+        }
+      }
+      filepay.build(options, function(err, tx) {
+        // If only 'key' is included, it will use the default values for
+        // rest of the pay attributes
+        // and make a transaction that sends money to oneself
+        // (since no receiver is specified)
+        let generated = tx.toObject();
+        delete generated.hash;
+        for (const input of generated.inputs) {
+          delete input.script;
+          delete input.scriptString;
+          delete input.output.script;
+        }
+
+        for (let i = 0; i < generated.outputs.length - 1; i++) {
+          delete  generated.outputs[i].script;
+        }
+        assert.deepEqual(generated, {
+          "version":1,
+          "inputs":[
+             {
+                "prevTxId":"49f366aae0b6b58474cca308af49e4961ede8e0af6327422389eddca615d6b1d",
+                "outputIndex":0,
+                "sequenceNumber":4294967295,
+                "output":{
+                   "satoshis":10000
+                }
+             }
+          ],
+          "outputs":[
+             {
+                "satoshis":0,
+
+             },
+             {
+                "satoshis":601,
+
+             },
+             {
+                "satoshis":9251,
+                "script": (new bitcoin.Script.fromAddress(scriptChange)).toHex()
+             }
+          ],
+          "nLockTime":0
+       });
+        done()
+      })
+    });
+
     it('Check change is generated', function(done) {
       function buildNBKeyOut(to) {
         if (to instanceof bitcoin.PublicKey) {

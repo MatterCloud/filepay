@@ -409,7 +409,18 @@ var build = function(options, callback) {
       }
       // select coins and provide a changeScript
       let feeb = (options.pay && options.pay.feeb) ? options.pay.feeb : 0.5;
-      const coinSelectedBuiltTx = selectCoins(dedupUtxosPreserveRequiredIfFound(utxos), desiredOutputs, feeb, bitcoin.Script.fromAddress(address).toHex());
+      // My default the payment key is the change script
+      let changeScriptHex = bitcoin.Script.fromAddress(address).toHex();
+      // Allow the user to override it with their own address
+      if (options.pay.changeAddress) {
+        changeScriptHex = bitcoin.Script.fromAddress(options.pay.changeAddress).toHex();
+      }
+      // Also allow the user to override it with a changeScript (in hex)
+      if (options.pay.changeScript) {
+        // Sanity check to make sure it's well formed valid script
+        changeScriptHex = bitcoin.Script.fromHex(options.pay.changeScript).toHex();
+      }
+      const coinSelectedBuiltTx = selectCoins(dedupUtxosPreserveRequiredIfFound(utxos), desiredOutputs, feeb, changeScriptHex);
       if (!coinSelectedBuiltTx.inputs || !coinSelectedBuiltTx.outputs) {
         innerCallback('Insufficient input utxo', null, null);
         return;
