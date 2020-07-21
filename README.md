@@ -157,6 +157,8 @@ filepay.send({
     key: "5JZ4RXH4MoXpaUQMcJHo8DxhZtkf5U5VnYd9zZH8BRKZuAbxZEw",
     rpc: "https://api.mattercloud.net",
     feeb: 0.5,
+    // changeAddress: '19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut', // Optional send change to this address instead of payment key address.
+    // changeScript: '0393822...', // Optional hex encoded output script to send to. Overrides changeAddress if both provided.
     inputs: [
       {
         "txid": "19b99a8b4a8c8c1d2e3130945aeda7d8070104af2ff9320667d95fd1a311ea12",
