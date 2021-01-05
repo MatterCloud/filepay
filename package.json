@@ -21,7 +21,7 @@
   "license": "MIT",
   "unpkg": "dist/filepay.min.js",
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bitcore-explorers": "^1.0.1",
     "bsv": "^1.5.3",
     "bsv-coinselect": "^4.2.5",
